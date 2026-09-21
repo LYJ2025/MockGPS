@@ -5,6 +5,9 @@
 
 ## 前置：在 GitHub 建好空仓库
 
+> **若你已在 GitHub 上建好 `LYJ2025/MockGPS` 空仓库，这整步可跳过，直接看下方「推送步骤」。**
+> 还没建的话按下面做：
+
 1. 打开 https://github.com/new
 2. Repository name 填 `MockGPS`，选 **Public**
 3. **不要**勾 Add a README / .gitignore / license（勾了会和 bundle 冲突）
