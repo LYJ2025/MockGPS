@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标前景：蓝色定位针。108dp 画布，内容控制在中央 66dp 安全区内 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 针头圆（圆心 54,45 半径 22） -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M54,23 a22,22 0 1,0 0,44 a22,22 0 1,0 0,-44 z" />
+
+    <!-- 针尖三角，底边两端落在圆周上 -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M37.65,59.72 L70.35,59.72 L54,85.7 z" />
+
+    <!-- 白色内孔 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,35.5 a9.5,9.5 0 1,0 0,19 a9.5,9.5 0 1,0 0,-19 z" />
+</vector>

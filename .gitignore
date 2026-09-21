@@ -1,0 +1,19 @@
+# ---- Gradle / 构建产物 ----
+.gradle/
+build/
+app/build/
+local.properties
+captures/
+
+# ---- IDE ----
+*.iml
+.idea/
+.externalNativeBuild/
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- 预编译包（发布见 GitHub Releases，不入库）----
+app-debug-*.apk
+app-debug-*.zip

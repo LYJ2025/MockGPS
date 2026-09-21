@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spinner 收起状态下显示的项（ArrayAdapter 直接把根布局当 TextView 用） -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="end"
+    android:paddingStart="12dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="34dp"
+    android:paddingBottom="13dp"
+    android:singleLine="true"
+    android:textColor="@color/text_primary"
+    android:textSize="15sp" />

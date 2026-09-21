@@ -1,0 +1,21 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        // 国内镜像：Google / Maven Central 访问不畅时的备用源
+        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // 国内镜像：Google / Maven Central 访问不畅时的备用源
+        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
+    }
+}
+rootProject.name = "MockGPS"
+include ':app'

@@ -1,0 +1,4 @@
+// 根项目构建脚本：仅声明 Android Gradle Plugin 版本，依赖仓库在 settings.gradle 中统一管理
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}

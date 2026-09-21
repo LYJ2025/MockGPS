@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- 启动图标背景（白底） -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+
+    <!-- 品牌色 -->
+    <color name="brand_primary">#6C4CE0</color>
+    <color name="brand_on_primary">#FFFFFFFF</color>
+    <color name="brand_container">#E9E3FF</color>
+    <color name="brand_on_container">#25135C</color>
+    <color name="brand_gradient_top">#7C4DFF</color>
+    <color name="brand_gradient_bottom">#512DA8</color>
+
+    <!-- 页面与文字 -->
+    <color name="app_bg">#F3F4F9</color>
+    <color name="card_bg">#FFFFFFFF</color>
+    <color name="text_primary">#1B1B1F</color>
+    <color name="text_secondary">#5F6070</color>
+    <color name="text_on_gradient_sub">#DCD1FF</color>
+
+    <!-- 状态胶囊 -->
+    <color name="state_idle_bg">#ECEDF3</color>
+    <color name="state_idle_text">#5F6070</color>
+    <color name="state_ok_bg">#DFF3E6</color>
+    <color name="state_ok_text">#0F7A45</color>
+    <color name="state_warn_bg">#FDECD9</color>
+    <color name="state_warn_text">#A85A00</color>
+</resources>
