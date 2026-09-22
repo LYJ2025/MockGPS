@@ -6,7 +6,8 @@
         <item name="colorPrimaryContainer">@color/brand_container</item>
         <item name="colorOnPrimaryContainer">@color/brand_on_container</item>
         <item name="android:windowBackground">@color/app_bg</item>
-        <item name="android:statusBarColor">@color/brand_gradient_top</item>
+        <!-- 状态栏与标题栏同色，纯色无渐变 -->
+        <item name="android:statusBarColor">@color/brand_header</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/app_bg</item>
     </style>

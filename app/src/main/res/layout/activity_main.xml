@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="经纬度 / 行政区 / 地图选点 · Mock GPS"
-                android:textColor="@color/text_on_gradient_sub"
+                android:textColor="@color/text_on_brand_sub"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -53,7 +53,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0.85"
-            android:text="v1.10"
+            android:text="v1.11"
             android:textColor="@color/white"
             android:textSize="12sp" />
     </LinearLayout>

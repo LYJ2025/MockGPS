@@ -11,15 +11,15 @@
     <color name="brand_on_primary">#FFFFFFFF</color>
     <color name="brand_container">#E1F1FC</color>
     <color name="brand_on_container">#0B3D63</color>
-    <color name="brand_gradient_top">#5BB9F5</color>
-    <color name="brand_gradient_bottom">#1E80D8</color>
+    <!-- 顶部标题栏 / 状态栏：纯色（v1.11 起不再使用渐变） -->
+    <color name="brand_header">#3BA7EF</color>
 
     <!-- 页面与文字 -->
     <color name="app_bg">#F3F4F9</color>
     <color name="card_bg">#FFFFFFFF</color>
     <color name="text_primary">#1B1B1F</color>
     <color name="text_secondary">#5F6070</color>
-    <color name="text_on_gradient_sub">#D9EFFF</color>
+    <color name="text_on_brand_sub">#D9EFFF</color>
 
     <!-- 状态胶囊 -->
     <color name="state_idle_bg">#ECEDF3</color>
