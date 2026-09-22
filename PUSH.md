@@ -42,14 +42,16 @@ git push -u origin main
 
 推送成功后访问 https://github.com/LYJ2025/MockGPS 即可看到代码。
 
-## 想顺手把 APK 也放上去（可选）
+## 把 APK 放到 Releases（可选，但建议）
 
-源码仓库默认不含 APK（被 `.gitignore` 排除，符合常规）。如果想让用户直接在仓库下载安装包：
+源码仓库默认不含 APK（被 `.gitignore` 排除，符合常规）。想让用户直接在 GitHub 下载安装包：
 
 1. 在 GitHub 仓库页点 **Releases → Draft a new release**
 2. Tag 填当前版本号（如 `v1.11`），标题 `虚拟定位助手 v1.11`
-3. 把对应的 `app-debug-v<版本号>.apk` 拖进去作为附件
+3. **只拖入 `app-debug-v<版本号>.apk` 一个文件作为附件（不要传 `.zip`）**
 4. 发布
+
+> 为什么只传 apk：`.zip` 只是「apk 的压缩包」，里面还是同一个 apk，纯属重复，下载方多解压一步。apk 本身就能直接安装。
 
 ## 备注
 
