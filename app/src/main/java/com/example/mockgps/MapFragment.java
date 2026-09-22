@@ -3,9 +3,12 @@ package com.example.mockgps;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,8 +34,6 @@ import org.osmdroid.util.MapTileIndex;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -45,6 +46,9 @@ import java.util.Locale;
  * <p>坐标系：App 对内对外统一用 WGS-84；高德瓦片是 GCJ-02，
  * 所以「地图上的点」与「写入系统的坐标」之间要做双向换算
  * （见 {@link CoordUtil}）。
+ *
+ * <p>首次进入且尚未选点时，地图会自动居中到<b>真实 GPS 位置</b>并画一个蓝点，
+ * 而不是停在世界原点的一片空白上。
  */
 public class MapFragment extends Fragment {
 
@@ -81,12 +85,16 @@ public class MapFragment extends Fragment {
                     "https://webst04.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}"});
 
     private MapView mapView;
-    private Marker marker;
-    private MyLocationNewOverlay myLocationOverlay;
-    private boolean myLocationEnabled = false;
+    private Marker marker;        // 虚拟定位选点标记
+    private Marker realMarker;    // 真实 GPS 位置（蓝点）
 
     private TextView tvCoord, tvState;
     private double selLat = Double.NaN, selLng = Double.NaN;
+
+    /** 是否已注册真实位置更新 */
+    private boolean realUpdatesOn = false;
+    /** 本次进入是否已按真实位置居中过（避免反复抢用户手势） */
+    private boolean centeredOnReal = false;
 
     private MainActivity activity() {
         return (MainActivity) requireActivity();
@@ -130,11 +138,22 @@ public class MapFragment extends Fragment {
         mapView.setMultiTouchControls(true);
         mapView.setMinZoomLevel(3.0);
         mapView.setMaxZoomLevel(19.0);
-        mapView.getController().setZoom(14.0);
+        mapView.getController().setZoom(16.0);
 
+        // 真实位置蓝点（先加，后加的浮层会盖在上面）
+        realMarker = new Marker(mapView);
+        realMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        realMarker.setTitle("我的位置");
+        realMarker.setVisible(false);
+        Drawable dot = ContextCompat.getDrawable(requireContext(), R.drawable.ic_my_location);
+        if (dot != null) realMarker.setIcon(dot);
+        mapView.getOverlays().add(realMarker);
+
+        // 选点标记：未选点时不显示（否则会画在世界原点）
         marker = new Marker(mapView);
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
         marker.setTitle("虚拟定位");
+        marker.setVisible(false);
         mapView.getOverlays().add(marker);
 
         MapEventsOverlay events = new MapEventsOverlay(new MapEventsReceiver() {
@@ -166,15 +185,19 @@ public class MapFragment extends Fragment {
         btnCenter.setOnClickListener(x -> centerSelected());
         btnFav.setOnClickListener(x -> favoriteSelected());
 
-        enableMyLocationIfPermitted();
+        enableRealLocation();
         syncFromState(false);
+        // 没有选点也没有主页坐标时，定位到真实 GPS
+        centerOnRealIfIdle(true);
     }
 
     @Override
     public void onResume() {
         super.onResume();
         mapView.onResume();
+        enableRealLocation();
         syncFromState(true);
+        centerOnRealIfIdle(true);
         // 从主页切过来时把 UI 上的生效状态刷新一次
         refreshStateText();
     }
@@ -182,16 +205,20 @@ public class MapFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
+        removeRealUpdates();
         mapView.onPause();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        removeRealUpdates();
         if (mapView != null) {
             mapView.onDetach();
             mapView = null;
         }
+        realMarker = null;
+        marker = null;
     }
 
     // ==================== 选点 ====================
@@ -281,26 +308,99 @@ public class MapFragment extends Fragment {
         }
     }
 
-    // ==================== 真实位置蓝点 ====================
+    // ==================== 真实位置（蓝点） ====================
 
-    private void enableMyLocationIfPermitted() {
-        if (myLocationEnabled || !hasLocationPermission()) return;
-        myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(requireContext()), mapView);
-        myLocationOverlay.enableMyLocation();
-        mapView.getOverlays().add(myLocationOverlay);
-        myLocationEnabled = true;
+    /**
+     * 取一个「真实」的最近位置。
+     *
+     * <p>注意：本 App 的虚拟定位只覆盖 {@code gps} 提供方，
+     * 所以 {@code network} / {@code passive} 始终反映真实位置；
+     * 虚拟定位开启时不能再把 {@code gps} 的缓存当成真实位置，否则蓝点会跟着跳到假位置。
+     */
+    private Location bestRealLocation() {
+        if (!hasLocationPermission()) return null;
+        LocationManager lm = activity().getLocationManager();
+        if (lm == null) return null;
+
+        String[] order = activity().isMockActive()
+                ? new String[]{LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER}
+                : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER,
+                LocationManager.PASSIVE_PROVIDER};
+
+        for (String p : order) {
+            Location l = null;
+            try {
+                l = lm.getLastKnownLocation(p);
+            } catch (Exception ignored) {
+            }
+            if (l != null) return l;
+        }
+        return null;
+    }
+
+    /** 权限具备时：先把缓存里的真实位置画出来，再注册实时更新 */
+    private void enableRealLocation() {
+        if (mapView == null || !hasLocationPermission()) return;
+        Location cached = bestRealLocation();
+        if (cached != null) showRealPosition(cached);
+        registerRealUpdates();
+    }
+
+    private void registerRealUpdates() {
+        if (realUpdatesOn || mapView == null || !hasLocationPermission()) return;
+        LocationManager lm = activity().getLocationManager();
+        if (lm == null) return;
+        try {
+            // 只监听 network：本 App 的模拟不覆盖它，拿到的永远是真实位置
+            if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 0f,
+                        realListener, Looper.getMainLooper());
+                realUpdatesOn = true;
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void removeRealUpdates() {
+        if (!realUpdatesOn) return;
+        realUpdatesOn = false;
+        LocationManager lm = activity().getLocationManager();
+        if (lm == null) return;
+        try {
+            lm.removeUpdates(realListener);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void showRealPosition(Location loc) {
+        if (mapView == null || realMarker == null || loc == null) return;
+        realMarker.setPosition(toMapPoint(loc.getLatitude(), loc.getLongitude()));
+        realMarker.setVisible(true);
+    }
+
+    /** 尚无选点、主页也没有坐标时，把视野居中到真实位置 */
+    private void centerOnRealIfIdle(boolean animate) {
+        if (mapView == null) return;
+        if (centeredOnReal) return;
+        if (!Double.isNaN(selLat)) return;                 // 已有选点，不抢视野
+        if (activity().getState().valid) return;            // 主页已有坐标，交给 syncFromState
+        Location loc = bestRealLocation();
+        if (loc == null) return;
+        GeoPoint gp = toMapPoint(loc.getLatitude(), loc.getLongitude());
+        if (animate) {
+            mapView.getController().animateTo(gp);
+        } else {
+            mapView.getController().setCenter(gp);
+        }
+        centeredOnReal = true;
+        mapView.invalidate();
     }
 
     /** 权限结果回来后由 MainActivity 调用 */
     public void refreshMyLocation() {
         if (mapView == null) return;
-        enableMyLocationIfPermitted();
-        if (Double.isNaN(selLat)) {
-            Location last = lastKnown();
-            if (last != null) {
-                mapView.getController().setCenter(toMapPoint(last.getLatitude(), last.getLongitude()));
-            }
-        }
+        enableRealLocation();
+        centerOnRealIfIdle(true);
         mapView.invalidate();
     }
 
@@ -309,21 +409,26 @@ public class MapFragment extends Fragment {
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private Location lastKnown() {
-        if (!hasLocationPermission()) return null;
-        LocationManager lm = activity().getLocationManager();
-        if (lm == null) return null;
-        Location best = null;
-        for (String p : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
-            Location l = null;
-            try {
-                l = lm.getLastKnownLocation(p);
-            } catch (SecurityException ignored) {
-            }
-            if (l != null && (best == null || l.getTime() > best.getTime())) best = l;
+    private final LocationListener realListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            showRealPosition(location);
+            centerOnRealIfIdle(true);
+            if (mapView != null) mapView.invalidate();
         }
-        return best;
-    }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+        }
+
+        @Override
+        public void onProviderEnabled(@NonNull String provider) {
+        }
+
+        @Override
+        public void onProviderDisabled(@NonNull String provider) {
+        }
+    };
 
     // ==================== 收藏当前选点 ====================
 
