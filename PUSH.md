@@ -24,8 +24,8 @@ git clone MockGPS.bundle MockGPS
 # 2. 进入目录
 cd MockGPS
 
-# 3. 克隆下来是游离 HEAD，切到 main 分支（避免推送时报"没有 main 分支"）
-git checkout -b main
+# 3. 确认在 main 分支（bundle 已带 refs/heads/main，克隆后即为 main，无需再手动建分支）
+git branch --show-current
 
 # 4. 把远程指向你刚建的空仓库
 git remote set-url origin https://github.com/LYJ2025/MockGPS.git
@@ -47,8 +47,8 @@ git push -u origin main
 源码仓库默认不含 APK（被 `.gitignore` 排除，符合常规）。如果想让用户直接在仓库下载安装包：
 
 1. 在 GitHub 仓库页点 **Releases → Draft a new release**
-2. Tag 填 `v1.8`，标题 `虚拟定位助手 v1.8`
-3. 把 `app-debug-v1.8.apk` 拖进去作为附件
+2. Tag 填 `v1.10`，标题 `虚拟定位助手 v1.10`
+3. 把 `app-debug-v1.10.apk` 拖进去作为附件
 4. 发布
 
 ## 备注
