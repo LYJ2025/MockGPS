@@ -47,8 +47,8 @@ git push -u origin main
 源码仓库默认不含 APK（被 `.gitignore` 排除，符合常规）。如果想让用户直接在仓库下载安装包：
 
 1. 在 GitHub 仓库页点 **Releases → Draft a new release**
-2. Tag 填 `v1.10`，标题 `虚拟定位助手 v1.10`
-3. 把 `app-debug-v1.10.apk` 拖进去作为附件
+2. Tag 填当前版本号（如 `v1.11`），标题 `虚拟定位助手 v1.11`
+3. 把对应的 `app-debug-v<版本号>.apk` 拖进去作为附件
 4. 发布
 
 ## 备注
