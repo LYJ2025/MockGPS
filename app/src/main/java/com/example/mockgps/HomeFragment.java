@@ -294,7 +294,7 @@ public class HomeFragment extends Fragment {
             if (divisionMode == TAB_PROVINCE) {
                 applyProvince(pi);
             } else if (DivisionData.CITY_NAMES[pi].length == 0) {
-                // 直辖市 / 特别行政区没有地级建制，别再弹提示了，直接像省级那样定位到市中心
+                // 直辖市 / 特别行政区没有地级建制，直接像省级那样定位到市中心（不弹提示）
                 applyNoSubDivision(pi);
             } else {
                 selProvince = pi;
@@ -308,14 +308,13 @@ public class HomeFragment extends Fragment {
 
     /**
      * 直辖市（京 / 津 / 沪 / 渝）与港澳特别行政区不设地级行政区，
-     * 在地级列表里点到它们时，行为和省级列表一样：直接定位到该行政区的中心。
+     * 在地级列表里点到它们时，行为和省级列表一样：直接定位到该行政区的中心，不再弹提示。
      */
     private void applyNoSubDivision(int pi) {
         if (pi < 0 || pi >= DivisionData.PROVINCE_NAMES.length) return;
         String name = DivisionData.PROVINCE_NAMES[pi];
         locate(name, DivisionData.PROVINCE_LATLNG[pi][0],
                 DivisionData.PROVINCE_LATLNG[pi][1], "");
-        toast(name + " 不设地级行政区，已直接定位到其中心");
     }
 
     private void applyProvince(int pi) {
