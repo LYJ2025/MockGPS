@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 外观设置页里动态生成的分段按钮。走代码 inflate 而不是 new MaterialButton()，
+     这样能直接复用 Widget.MockGPS.Segmented，不必去碰 Material 库的内部 attr。 -->
+<com.google.android.material.button.MaterialButton xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.MockGPS.Segmented"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1" />

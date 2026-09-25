@@ -1,10 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MockGPS design kit · 统一图标规范：24 网格 / 2dp 圆头圆角描边 / 单色可 tint -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#1B1B1F"
-        android:pathData="M5,16h3v3h2v-5H5v2zM8,8H5v2h5V5H8v3zM14,19h2v-3h3v-2h-5v5zM16,8V5h-2v5h5V8h-3z" />
+        android:pathData="M9.5 4.5 V8 A1.5 1.5 0 0 1 8 9.5 H4.5"
+        android:strokeColor="@color/icon_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M14.5 4.5 V8 A1.5 1.5 0 0 0 16 9.5 H19.5"
+        android:strokeColor="@color/icon_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M19.5 14.5 H16 A1.5 1.5 0 0 0 14.5 16 V19.5"
+        android:strokeColor="@color/icon_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M4.5 14.5 H8 A1.5 1.5 0 0 1 9.5 16 V19.5"
+        android:strokeColor="@color/icon_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
 </vector>

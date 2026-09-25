@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 自定义主题属性
+  目的：让「设计风格 / 玻璃强度 / 圆角 / 动效等级」等参数可以通过 ThemeOverlay 切换，
+  View 只引用 attr，不写死具体色值或尺寸，从而实现运行时可切换与参数微调。
+
+  收录标准（三条必须同时满足，否则不要加进来）：
+    a) 有明确的消费点 —— 布局 XML 里写 attr 引用，或 Java 里读 materialTheme / R.attr；
+    b) 能被 ThemeOverlay 覆盖并即时生效；
+    c) 值的类型能表达你要的东西。
+
+  注意：XML 注释里不能出现连续两个减号，所以本文件的分隔线用等号画。
+
+  两条已经踩过的坑，不要重犯：
+    1) 不要声明 integerGlassAlpha 这类「透明度整数」属性。
+       玻璃的底色只有 cardBackgroundColor / android:background 两个消费点，都只吃 color。
+       想要可调节透明度，正确做法是准备颜色斜坡资源（colors.xml 的 glass_surface_s50…s95），
+       而不是声明一个没人读的 integer。
+    2) 不要声明 dimenIconStroke。
+       VectorDrawable 的 strokeWidth 在编译期就写进了资源，运行时换 attr 不会重绘描边。
+       方案 A/B 需要不同描边粗细时，正确做法是提供两套图标资源
+       （例如 ic_pin.xml 与 ic_pin_bold.xml），按方案选 drawable，而不是换一个 dimen。
+-->
+<resources>
+
+    <!-- ========== 颜色：图标语义色 ========== -->
+    <attr name="colorIconPrimary" format="color" />
+    <attr name="colorIconSecondary" format="color" />
+    <attr name="colorIconTertiary" format="color" />
+    <attr name="colorIconOnGlass" format="color" />
+
+    <!-- ========== 颜色：玻璃 ========== -->
+    <attr name="colorGlassSurface" format="color" />
+    <attr name="colorGlassBorder" format="color" />
+    <attr name="colorGlassHighlight" format="color" />
+
+    <!-- ========== 颜色：状态胶囊 ========== -->
+    <attr name="colorStateIdleBg" format="color" />
+    <attr name="colorStateIdleText" format="color" />
+    <attr name="colorStateOkBg" format="color" />
+    <attr name="colorStateOkText" format="color" />
+    <attr name="colorStateWarnBg" format="color" />
+    <attr name="colorStateWarnText" format="color" />
+    <attr name="colorStateDanger" format="color" />
+
+    <!-- ========== 尺寸：形状与间距 ========== -->
+    <attr name="dimenRadiusCard" format="dimension" />
+    <attr name="dimenRadiusButton" format="dimension" />
+    <attr name="dimenRadiusSheet" format="dimension" />
+    <!--
+      卡片内边距。这是「密度预设（紧凑/标准/宽松）」的落点。
+      注意不要退回成 dimenSpaceUnit 那种「栅格单位」：XML 里拿不到单位去做乘法，
+      声明出来必然没人读，就是空转属性。要在布局里直接消费的量，才配做成 attr。
+    -->
+    <attr name="dimenCardPadding" format="dimension" />
+    <attr name="dimenCardElevation" format="dimension" />
+
+    <!-- ========== 玻璃参数 ========== -->
+    <!-- 模糊半径（dp）。0 = 关。API 31+ 用 RenderEffect 真模糊，低版本降级为纯 alpha 蒙版 -->
+    <attr name="integerGlassBlur" format="integer" />
+    <!-- 是否绘制内高光（方案 B 开启） -->
+    <attr name="booleanGlassSpecular" format="boolean" />
+    <!-- 是否跟随地图内容动态染色（方案 B 开启） -->
+    <attr name="booleanGlassDynamicTint" format="boolean" />
+
+    <!-- ========== 动效等级：0=关 1=基础 2=丰富 3=全开 ========== -->
+    <attr name="integerMotionLevel" format="integer" />
+
+    <!-- ========== 当前设计方案（供自定义 View 读取，值为 0/1/2） ========== -->
+    <attr name="enumDesignScheme" format="enum">
+        <enum name="macrosoft" value="0" />
+        <enum name="liquid" value="1" />
+        <enum name="motion" value="2" />
+    </attr>
+</resources>

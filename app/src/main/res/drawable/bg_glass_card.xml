@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  玻璃卡片背景（近似实现）
+  真实的背景模糊无法由 XML 完成；本 drawable 负责：
+    1) 半透明底色（?attr/colorGlassSurface）
+    2) 细描边（?attr/colorGlassBorder）
+    3) 顶部一条内高光线（?attr/colorGlassHighlight）——决定"像不像玻璃"
+  模糊与折射由代码按 ?attr/integerGlassBlur / booleanGlassSpecular 叠加实现。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorGlassSurface" />
+            <stroke
+                android:width="@dimen/glass_border_width"
+                android:color="?attr/colorGlassBorder" />
+            <corners android:radius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+
+    <item android:gravity="top">
+        <shape android:shape="rectangle">
+            <size android:height="@dimen/glass_inner_highlight" />
+            <solid android:color="?attr/colorGlassHighlight" />
+            <corners
+                android:topLeftRadius="?attr/dimenRadiusCard"
+                android:topRightRadius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+
+</layer-list>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  整页背景（参考 UI优化方案.html 的 body）：
+    radial-gradient(circle at 12% 6%, rgba(59,167,239,.20), transparent 42%),
+    radial-gradient(circle at 92% 12%, rgba(120,150,255,.16), transparent 40%),
+    radial-gradient(circle at 70% 96%, rgba(59,167,239,.14), transparent 46%),
+    #EEF2F8
+  Android 上没有 radial-gradient 多层叠加，所以用 layer-list 一层层叠。
+  这层就是「玻璃透过去的底图」—— 顶栏半透明磨砂、卡片半透明染色都靠这层才有意义。
+  ?android:attr/colorBackground 是兜底色，会随深浅模式切换。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 兜底色：浅色模式 EE 浅蓝灰，深色模式由 values-night/colors.xml 提供更深的版本 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?android:attr/colorBackground" />
+        </shape>
+    </item>
+    <!-- 色斑 1：左上角主色光晕 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="520dp"
+                android:centerX="0.12"
+                android:centerY="0.06"
+                android:startColor="#1A3BA7EF"
+                android:endColor="#003BA7EF" />
+        </shape>
+    </item>
+    <!-- 色斑 2：右上角紫蓝光晕 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="500dp"
+                android:centerX="0.92"
+                android:centerY="0.12"
+                android:startColor="#1A7896FF"
+                android:endColor="#007896FF" />
+        </shape>
+    </item>
+    <!-- 色斑 3：右下角主色光晕 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="540dp"
+                android:centerX="0.7"
+                android:centerY="0.96"
+                android:startColor="#143BA7EF"
+                android:endColor="#003BA7EF" />
+        </shape>
+    </item>
+</layer-list>

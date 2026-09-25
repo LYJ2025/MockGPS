@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 白底描边圆角 + 右侧下拉箭头 -->
+<!--
+  下拉选择框（Spinner）背景：表面色底 + 描边 + 右侧下拉箭头。
+  改走主题属性后，深色模式下不再出现「白底 + 浅色文字」的不可读组合。
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/white" />
+            <solid android:color="?attr/colorSurface" />
             <stroke
                 android:width="1dp"
-                android:color="#C9CBD8" />
-            <corners android:radius="12dp" />
+                android:color="?attr/colorOutlineVariant" />
+            <corners android:radius="?attr/dimenRadiusButton" />
         </shape>
     </item>
     <item

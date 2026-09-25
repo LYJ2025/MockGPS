@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 收藏列表单项：备注名 + 经纬度 + 删除按钮 -->
+<!--
+  收藏列表单项：实心星标 + 备注名 + 经纬度 + 删除按钮
+  配色全部走主题属性，深色模式与主色预设切换时自动跟随。
+  图标 tint 用 app:tint。前提是本页所在 Activity 继承 AppCompatActivity，
+  AppCompat 的 viewInflater 会把 <ImageView>/<ImageButton> 替换成
+  AppCompatImageView/AppCompatImageButton，只有它们才读 app:tint。
+  反过来 android:tint 在两种 Activity 下都能用，但 lint 会报 UseAppTint。
+  万一哪天换成非 AppCompat 的 Activity，app:tint 会被静默忽略，
+  此时图标退回 vector 里自带的 @color/icon_* —— 是合理的兜底色，不会变黑块。
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
@@ -14,10 +24,9 @@
     <ImageView
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:contentDescription="位置"
-        android:src="@drawable/ic_star"
-        app:tint="@color/brand_primary"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+        android:contentDescription="已收藏"
+        android:src="@drawable/ic_star_filled"
+        app:tint="?attr/colorPrimary" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -32,7 +41,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="@color/text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -43,7 +52,7 @@
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="@color/text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -53,6 +62,7 @@
         android:layout_height="40dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="删除收藏"
-        android:src="@drawable/ic_delete" />
+        android:src="@drawable/ic_delete"
+        app:tint="?attr/colorIconTertiary" />
 
 </LinearLayout>

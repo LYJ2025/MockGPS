@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 玻璃卡片背景（不带内高光）——用于方案 C 或"玻璃强度=关"时的静态半透明卡 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorGlassSurface" />
+            <stroke
+                android:width="@dimen/glass_border_width"
+                android:color="?attr/colorGlassBorder" />
+            <corners android:radius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+</layer-list>

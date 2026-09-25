@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="@color/state_warn_bg" />
+<!-- 状态胶囊 · 警告态 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/colorStateWarnBg" />
     <corners android:radius="10dp" />
 </shape>

@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  地图选点页：整屏地图，不再是主页里那个小窗口。
-  点地图任意位置即换算为 WGS-84 并立即应用到虚拟定位。
+  选点地图页：整屏地图，点哪儿就定位到哪儿（WGS-84）。
+  与轨迹页是两个独立地图实例。
+
+  本页是「玻璃浮层」最密集的地方，所有浮层统一用 bg_glass_pill / Card.Glass，
+  因此会随「玻璃强度 / 透明度 / 圆角 / 主色 / 深浅模式」一起变。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_bg">
+    android:background="?android:attr/colorBackground">
 
     <org.osmdroid.views.MapView
         android:id="@+id/map"
@@ -32,27 +35,19 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/src_amap"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MockGPS.Segmented"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:minWidth="62dp"
-                android:minHeight="34dp"
-                android:text="高德"
-                android:textSize="12sp" />
+                android:text="高德" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/src_sat"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MockGPS.Segmented"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:minWidth="62dp"
-                android:minHeight="34dp"
-                android:text="卫星"
-                android:textSize="12sp" />
+                android:text="卫星" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </HorizontalScrollView>
 
@@ -67,32 +62,32 @@
 
         <ImageButton
             android:id="@+id/btn_zoom_in"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_map_btn"
+            style="@style/Widget.MockGPS.Button.MapFloat"
+            android:layout_width="@dimen/map_float_button"
+            android:layout_height="@dimen/map_float_button"
             android:contentDescription="放大"
             android:src="@drawable/ic_zoom_in" />
 
         <ImageButton
             android:id="@+id/btn_zoom_out"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            style="@style/Widget.MockGPS.Button.MapFloat"
+            android:layout_width="@dimen/map_float_button"
+            android:layout_height="@dimen/map_float_button"
             android:layout_marginTop="8dp"
-            android:background="@drawable/bg_map_btn"
             android:contentDescription="缩小"
             android:src="@drawable/ic_zoom_out" />
 
         <ImageButton
             android:id="@+id/btn_center_sel"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            style="@style/Widget.MockGPS.Button.MapFloat"
+            android:layout_width="@dimen/map_float_button"
+            android:layout_height="@dimen/map_float_button"
             android:layout_marginTop="8dp"
-            android:background="@drawable/bg_map_btn"
             android:contentDescription="回到已选位置"
-            android:src="@drawable/ic_crosshair" />
+            android:src="@drawable/ic_target" />
     </LinearLayout>
 
-    <!-- 底部：已选坐标 + 收藏按钮 -->
+    <!-- 底部：提示 + 已选坐标 + 收藏按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -108,32 +103,44 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_map_hint"
+            android:background="@drawable/bg_glass_pill"
             android:gravity="center"
             android:paddingStart="15dp"
             android:paddingTop="7dp"
             android:paddingEnd="15dp"
             android:paddingBottom="7dp"
             android:text="点击地图上的位置以选择"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorIconOnGlass"
             android:textSize="13sp" />
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_map_info"
+            style="@style/Widget.MockGPS.Card.Glass"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/card_bg"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            android:layout_height="wrap_content">
 
-            <LinearLayout
+            <!--
+              玻璃染色容器：由 GlassBackdrop 往它的 background 上刷一层「淡主色」，
+              叠在卡片底色（?attr/colorGlassSurface，由"卡片不透明度"滑杆控制）之上。
+
+              为什么是 background 而不是内嵌 ImageView：
+                内嵌 ImageView 要铺满卡片就只能用 match_parent，而 match_parent 的子 View
+                在 wrap_content 的 FrameLayout 里会被量成"父可用高度"，把卡片顶成满屏；
+                为了压住它就得在 Java 里把 ImageView 的 LayoutParams 钉死成当时的高宽 ——
+                一旦钉死，卡片就再也缩不回去了（「点箭头只是隐藏按钮、窗口不缩小」的根因）。
+                改用 background 后染色层完全不参与测量，卡片高度永远由内容决定。
+            -->
+            <FrameLayout
+                android:id="@+id/glass_backdrop"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="14dp"
-                android:paddingTop="10dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="10dp">
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="?attr/dimenCardPadding">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -144,8 +151,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="已选位置（WGS-84）"
-                        android:textColor="@color/text_secondary"
+                        android:text="已选位置"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="11sp" />
 
                     <TextView
@@ -156,7 +163,7 @@
                         android:ellipsize="end"
                         android:singleLine="true"
                         android:text="尚未选点"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -166,7 +173,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="虚拟定位：未启用"
-                        android:textColor="@color/state_idle_text"
+                        android:textColor="?attr/colorStateIdleText"
                         android:textSize="11sp" />
                 </LinearLayout>
 
@@ -174,10 +181,12 @@
                     android:id="@+id/btn_map_fav"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    android:background="@drawable/bg_map_btn"
+                    android:background="@drawable/bg_glass_pill"
                     android:contentDescription="收藏该位置"
-                    android:src="@drawable/ic_star" />
+                    android:src="@drawable/ic_star_outline"
+                    app:tint="?attr/colorIconSecondary" />
             </LinearLayout>
+            </FrameLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 

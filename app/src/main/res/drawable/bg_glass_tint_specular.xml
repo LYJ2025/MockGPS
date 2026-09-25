@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  玻璃染色层（带内高光版）：方案 B「液态玻璃」用。
+  比普通版多一条顶部高光线 —— 这是决定「像不像玻璃」的关键一笔。
+  由 GlassBackdrop 在读取到 ?attr/booleanGlassSpecular 为 true 时选它。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorGlassSurface" />
+            <corners android:radius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+    <item android:gravity="top">
+        <shape android:shape="rectangle">
+            <size android:height="@dimen/glass_inner_highlight" />
+            <solid android:color="?attr/colorGlassHighlight" />
+            <corners
+                android:topLeftRadius="?attr/dimenRadiusCard"
+                android:topRightRadius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+</layer-list>

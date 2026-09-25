@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 行政区下钻列表的单项：名称 + 右侧箭头（表示还能继续下钻） -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
@@ -18,7 +19,7 @@
         android:layout_weight="1"
         android:ellipsize="end"
         android:singleLine="true"
-        android:textColor="@color/text_primary"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="15sp" />
 
     <ImageView
@@ -28,6 +29,7 @@
         android:layout_marginStart="8dp"
         android:contentDescription="下级"
         android:src="@drawable/ic_chevron_right"
+        app:tint="?attr/colorIconTertiary"
         android:visibility="visible" />
 
 </LinearLayout>

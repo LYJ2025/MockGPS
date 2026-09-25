@@ -1,14 +1,296 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 主题
+  注意：XML 注释里不能出现连续两个减号，所以本文件的分隔线用等号画。
+
+  结构：
+    Theme.MockGPS                          基础主题（= 方案 A 的默认值）
+    ThemeOverlay.MockGPS.SchemeA/B/C       三套设计风格（保留全部，用户可选）
+    ThemeOverlay.MockGPS.SurfaceAlpha.*    玻璃透明度（s50 ~ s95，步进 0.05）
+    ThemeOverlay.MockGPS.Glass.*           玻璃强度（关/轻/中/强）
+    ThemeOverlay.MockGPS.Radius.*          圆角（紧凑/标准/圆润）
+    ThemeOverlay.MockGPS.Motion.*          动效等级（关/基础/丰富/全开）
+    ThemeOverlay.MockGPS.Accent.*          主色预设（成套覆盖，见下）
+
+  运行时叠加顺序（ThemeManager 按此顺序 applyStyle(..., true)）：
+      Base -> Scheme -> SurfaceAlpha -> Radius -> Motion -> Accent -> Glass
+  参数优先级：越靠后叠加的覆盖前面的值，因此用户手动微调（透明度/圆角/动效/主色）
+  必须排在 Scheme 之后，否则会被方案默认值吃掉。
+
+  改版时的三条硬规则：
+  1) 方案差异必须落在「同一组 attr 的不同取值」上，不能只在基础主题里给值。
+     否则三套方案渲染结果完全一样（原设计包 A1 硬伤：colorGlassSurface 只在基础主题赋值）。
+  2) 每个 Accent.* 必须成套覆盖 primary / onPrimary / container / onContainer / secondary*，
+     只换 colorPrimary 会让卡片、开关、选中态之间串色（原设计包 A3 硬伤）。
+  3) 窗口级属性（android:statusBarColor 等）写在 ThemeOverlay 里不生效 ——
+     窗口读的是 Activity 自身的 theme。状态栏跟随主色由 ThemeManager 在代码里
+     window.setStatusBarColor(?attr/colorPrimary) 完成。
+-->
 <resources>
+
+    <!-- ==================== 基础主题 ==================== -->
     <style name="Theme.MockGPS" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand_primary</item>
-        <item name="colorOnPrimary">@color/brand_on_primary</item>
-        <item name="colorPrimaryContainer">@color/brand_container</item>
-        <item name="colorOnPrimaryContainer">@color/brand_on_container</item>
+
+        <!-- 品牌 / 主色（默认 = 淡蓝预设） -->
+        <item name="colorPrimary">@color/accent_blue</item>
+        <item name="colorOnPrimary">@color/accent_blue_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_blue_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_blue_on_container</item>
+        <item name="colorSecondary">@color/accent_blue</item>
+        <item name="colorSecondaryContainer">@color/accent_blue_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_blue_on_container</item>
+        <item name="colorAccent">@color/accent_blue</item>
+
+        <!-- 语义色 -->
+        <item name="colorError">@color/state_danger</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="colorErrorContainer">@color/state_danger_bg</item>
+        <item name="colorOnErrorContainer">@color/state_danger</item>
+
+        <!-- 表面角色兜底 -->
+        <item name="android:colorBackground">@color/app_bg</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorSurface">@color/card_bg</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline_variant</item>
+
+        <!-- M3 表面层级：BottomSheet / Snackbar / 菜单用得到 -->
+        <item name="colorSurfaceContainerLowest">@color/card_bg</item>
+        <item name="colorSurfaceContainerLow">@color/card_bg</item>
+        <item name="colorSurfaceContainer">@color/surface_variant</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_variant</item>
+        <item name="colorSurfaceContainerHighest">@color/surface_variant</item>
+        <item name="colorSurfaceDim">@color/app_bg</item>
+        <item name="colorSurfaceBright">@color/card_bg</item>
+
+        <!--
+          窗口级属性 ThemeManager.applyWindowColors 在运行时设置，
+          这里只给一个不抢戏的兜底色（半透明白），避免冷启动时状态栏闪一下纯主色。
+          真正生效的颜色是 setContentView 之后由 ThemeManager 写入的。
+        -->
         <item name="android:windowBackground">@color/app_bg</item>
-        <!-- 状态栏与标题栏同色，纯色无渐变 -->
-        <item name="android:statusBarColor">@color/brand_header</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#80FFFFFF</item>
         <item name="android:navigationBarColor">@color/app_bg</item>
+
+        <!--
+          全局组件钩子：把设计样式挂到主题上，后续新增界面不用逐个 style= 指定
+          —— 这是「软件迭代新增按钮/页面时设计仍然生效」的关键。
+        -->
+        <item name="materialCardViewStyle">@style/Widget.MockGPS.Card.Glass</item>
+        <item name="snackbarStyle">@style/Widget.MockGPS.Snackbar</item>
+        <item name="snackbarTextViewStyle">@style/Widget.MockGPS.Snackbar.TextView</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.MockGPS.BottomSheetDialog</item>
+
+        <!-- 自定义：图标语义色 -->
+        <item name="colorIconPrimary">@color/icon_primary</item>
+        <item name="colorIconSecondary">@color/icon_secondary</item>
+        <item name="colorIconTertiary">@color/icon_tertiary</item>
+        <item name="colorIconOnGlass">@color/icon_on_glass_light</item>
+
+        <!-- 自定义：玻璃 -->
+        <item name="colorGlassSurface">@color/glass_surface_s70</item>
+        <item name="colorGlassBorder">@color/glass_border</item>
+        <item name="colorGlassHighlight">@color/glass_highlight</item>
+        <item name="integerGlassBlur">16</item>
+        <item name="booleanGlassSpecular">false</item>
+        <item name="booleanGlassDynamicTint">false</item>
+
+        <!-- 自定义：状态胶囊 -->
+        <item name="colorStateIdleBg">@color/state_idle_bg</item>
+        <item name="colorStateIdleText">@color/state_idle_text</item>
+        <item name="colorStateOkBg">@color/state_ok_bg</item>
+        <item name="colorStateOkText">@color/state_ok_text</item>
+        <item name="colorStateWarnBg">@color/state_warn_bg</item>
+        <item name="colorStateWarnText">@color/state_warn_text</item>
+        <item name="colorStateDanger">@color/state_danger</item>
+
+        <!-- 自定义：形状 / 间距 / 动效 -->
+        <item name="dimenRadiusCard">@dimen/radius_preset_standard_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_standard_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_standard_xl</item>
+        <item name="dimenCardPadding">@dimen/card_padding_standard</item>
+        <item name="dimenCardElevation">@dimen/card_elevation_default</item>
+        <item name="integerMotionLevel">2</item>
+        <item name="enumDesignScheme">macrosoft</item>
+    </style>
+
+    <!-- ==================== 方案 A · 柔光毛玻璃 ==================== -->
+    <!-- 轻模糊 + 中等透明 + 标准圆角 + 低高度 -->
+    <style name="ThemeOverlay.MockGPS.SchemeA" parent="">
+        <item name="colorGlassSurface">@color/glass_surface_s70</item>
+        <item name="integerGlassBlur">16</item>
+        <item name="booleanGlassSpecular">false</item>
+        <item name="booleanGlassDynamicTint">false</item>
+        <item name="dimenRadiusCard">@dimen/radius_preset_standard_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_standard_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_standard_xl</item>
+        <item name="dimenCardElevation">@dimen/card_elevation_default</item>
+        <item name="integerMotionLevel">2</item>
+        <item name="enumDesignScheme">macrosoft</item>
+    </style>
+
+    <!-- ==================== 方案 B · 液态玻璃 ==================== -->
+    <!-- 强模糊 + 更透 + 全圆角 + 零高度 + 内高光 + 动态染色 + 动效全开 -->
+    <style name="ThemeOverlay.MockGPS.SchemeB" parent="">
+        <item name="colorGlassSurface">@color/glass_surface_s60</item>
+        <item name="integerGlassBlur">24</item>
+        <item name="booleanGlassSpecular">true</item>
+        <item name="booleanGlassDynamicTint">true</item>
+        <item name="colorGlassHighlight">@color/glass_highlight</item>
+        <item name="dimenRadiusCard">@dimen/radius_preset_round_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_round_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_round_xl</item>
+        <item name="dimenCardElevation">@dimen/card_elevation_liquid</item>
+        <item name="integerMotionLevel">3</item>
+        <item name="enumDesignScheme">liquid</item>
+    </style>
+
+    <!-- ==================== 方案 C · 动效优先 ==================== -->
+    <!-- 几乎不模糊 + 高不透明 + 标准圆角 + 动效全开（性能换观感） -->
+    <style name="ThemeOverlay.MockGPS.SchemeC" parent="">
+        <item name="colorGlassSurface">@color/glass_surface_s85</item>
+        <item name="integerGlassBlur">8</item>
+        <item name="booleanGlassSpecular">false</item>
+        <item name="booleanGlassDynamicTint">false</item>
+        <item name="dimenRadiusCard">@dimen/radius_preset_standard_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_standard_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_standard_xl</item>
+        <item name="dimenCardElevation">@dimen/card_elevation_default</item>
+        <item name="integerMotionLevel">3</item>
+        <item name="enumDesignScheme">motion</item>
+    </style>
+
+    <!-- ==================== 玻璃透明度（滑杆 0.50 ~ 0.95，步进 0.05） ==================== -->
+    <!-- 取值即 colors.xml 里的 glass_surface_sNN；浅色/深色各一套斜坡，自动跟随夜间模式 -->
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s50" parent=""><item name="colorGlassSurface">@color/glass_surface_s50</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s55" parent=""><item name="colorGlassSurface">@color/glass_surface_s55</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s60" parent=""><item name="colorGlassSurface">@color/glass_surface_s60</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s65" parent=""><item name="colorGlassSurface">@color/glass_surface_s65</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s70" parent=""><item name="colorGlassSurface">@color/glass_surface_s70</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s75" parent=""><item name="colorGlassSurface">@color/glass_surface_s75</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s80" parent=""><item name="colorGlassSurface">@color/glass_surface_s80</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s85" parent=""><item name="colorGlassSurface">@color/glass_surface_s85</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s90" parent=""><item name="colorGlassSurface">@color/glass_surface_s90</item></style>
+    <style name="ThemeOverlay.MockGPS.SurfaceAlpha.s95" parent=""><item name="colorGlassSurface">@color/glass_surface_s95</item></style>
+
+    <!-- ==================== 玻璃强度（模糊半径） ==================== -->
+    <style name="ThemeOverlay.MockGPS.Glass.Off" parent="">
+        <item name="integerGlassBlur">0</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Glass.Light" parent="">
+        <item name="integerGlassBlur">8</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Glass.Medium" parent="">
+        <item name="integerGlassBlur">16</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Glass.Strong" parent="">
+        <item name="integerGlassBlur">28</item>
+    </style>
+
+    <!-- ==================== 圆角 ==================== -->
+    <style name="ThemeOverlay.MockGPS.Radius.Compact" parent="">
+        <item name="dimenRadiusCard">@dimen/radius_preset_compact_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_compact_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_compact_xl</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Radius.Standard" parent="">
+        <item name="dimenRadiusCard">@dimen/radius_preset_standard_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_standard_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_standard_xl</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Radius.Round" parent="">
+        <item name="dimenRadiusCard">@dimen/radius_preset_round_l</item>
+        <item name="dimenRadiusButton">@dimen/radius_preset_round_m</item>
+        <item name="dimenRadiusSheet">@dimen/radius_preset_round_xl</item>
+    </style>
+
+    <!-- ==================== 密度（卡片内边距） ==================== -->
+    <style name="ThemeOverlay.MockGPS.Density.Compact" parent="">
+        <item name="dimenCardPadding">@dimen/card_padding_compact</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Density.Standard" parent="">
+        <item name="dimenCardPadding">@dimen/card_padding_standard</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Density.Comfortable" parent="">
+        <item name="dimenCardPadding">@dimen/card_padding_comfortable</item>
+    </style>
+
+    <!-- ==================== 动效等级 ==================== -->
+    <style name="ThemeOverlay.MockGPS.Motion.Off" parent="">
+        <item name="integerMotionLevel">0</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Motion.Basic" parent="">
+        <item name="integerMotionLevel">1</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Motion.Rich" parent="">
+        <item name="integerMotionLevel">2</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Motion.Full" parent="">
+        <item name="integerMotionLevel">3</item>
+    </style>
+
+    <!-- ==================== 主色预设 ==================== -->
+    <!-- 每个预设成套覆盖，保证 primary / container / secondary 之间不串色 -->
+    <style name="ThemeOverlay.MockGPS.Accent.Blue" parent="">
+        <item name="colorPrimary">@color/accent_blue</item>
+        <item name="colorOnPrimary">@color/accent_blue_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_blue_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_blue_on_container</item>
+        <item name="colorSecondary">@color/accent_blue</item>
+        <item name="colorSecondaryContainer">@color/accent_blue_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_blue_on_container</item>
+        <item name="colorAccent">@color/accent_blue</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Accent.Teal" parent="">
+        <item name="colorPrimary">@color/accent_teal</item>
+        <item name="colorOnPrimary">@color/accent_teal_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_teal_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_teal_on_container</item>
+        <item name="colorSecondary">@color/accent_teal</item>
+        <item name="colorSecondaryContainer">@color/accent_teal_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_teal_on_container</item>
+        <item name="colorAccent">@color/accent_teal</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Accent.Purple" parent="">
+        <item name="colorPrimary">@color/accent_purple</item>
+        <item name="colorOnPrimary">@color/accent_purple_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_purple_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_purple_on_container</item>
+        <item name="colorSecondary">@color/accent_purple</item>
+        <item name="colorSecondaryContainer">@color/accent_purple_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_purple_on_container</item>
+        <item name="colorAccent">@color/accent_purple</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Accent.Green" parent="">
+        <item name="colorPrimary">@color/accent_green</item>
+        <item name="colorOnPrimary">@color/accent_green_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_green_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_green_on_container</item>
+        <item name="colorSecondary">@color/accent_green</item>
+        <item name="colorSecondaryContainer">@color/accent_green_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_green_on_container</item>
+        <item name="colorAccent">@color/accent_green</item>
+    </style>
+    <style name="ThemeOverlay.MockGPS.Accent.Amber" parent="">
+        <item name="colorPrimary">@color/accent_amber</item>
+        <item name="colorOnPrimary">@color/accent_amber_on_primary</item>
+        <item name="colorPrimaryContainer">@color/accent_amber_container</item>
+        <item name="colorOnPrimaryContainer">@color/accent_amber_on_container</item>
+        <item name="colorSecondary">@color/accent_amber</item>
+        <item name="colorSecondaryContainer">@color/accent_amber_container</item>
+        <item name="colorOnSecondaryContainer">@color/accent_amber_on_container</item>
+        <item name="colorAccent">@color/accent_amber</item>
+    </style>
+
+    <!-- ==================== 外观设置页（独立主题，避免预览串色） ==================== -->
+    <style name="Theme.MockGPS.Appearance" parent="Theme.MockGPS" />
+
+    <!-- ==================== 底部弹层主题叠加 ==================== -->
+    <!-- 由 Theme.MockGPS 的 bottomSheetDialogTheme 钩子引用 -->
+    <style name="ThemeOverlay.MockGPS.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.MockGPS.BottomSheet</item>
     </style>
 </resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  玻璃染色层：铺在模糊底图之上的半透明面。
+  用 android:foreground 挂在卡片上（foreground 画在所有子 View 之上），
+  这样底图 + 染色层合起来就是「毛玻璃」，而染色层的 alpha 正好由
+  ?attr/colorGlassSurface 控制 —— 外观设置里的「透明度」滑杆调的就是它。
+
+  圆角与卡片一致，保证染色层不会溢出圆角。
+  本文件是不带内高光的版本；方案 B（液态玻璃）用 bg_glass_tint_specular。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorGlassSurface" />
+            <corners android:radius="?attr/dimenRadiusCard" />
+        </shape>
+    </item>
+</layer-list>

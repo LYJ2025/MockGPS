@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MockGPS design kit · 统一图标规范：24 网格 / 2dp 圆头圆角描边 / 单色可 tint -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 7 A5 5 0 1 0 12 17 A5 5 0 1 0 12 7 Z"
+        android:fillColor="@color/icon_primary" />
+    <path
+        android:pathData="M12 3.5 A8.5 8.5 0 1 0 12 20.5 A8.5 8.5 0 1 0 12 3.5 Z"
+        android:strokeColor="@color/icon_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:strokeAlpha="0.35" />
+</vector>

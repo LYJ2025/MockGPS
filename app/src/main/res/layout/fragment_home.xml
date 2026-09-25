@@ -3,33 +3,38 @@
   主页 Fragment。
   列表高度用 layout_weight="1" 占满剩余空间（不再是固定 170dp），
   并且可以把「坐标设置」区折叠起来，把整屏高度让给行政区 / 收藏列表。
+
+  改造要点：
+    · 两张卡片改用 Widget.MockGPS.Card.Glass，内边距走 ?attr/dimenCardPadding（密度预设的落点）。
+    · 按钮按语义套样式：应用=Primary / 停止=Ghost / 打开开发者设置=Ghost / 收藏=Tonal。
+    · 「坐标设置」折叠按钮的图标换成 ic_chevron_down —— 与设计包图标体系一致；
+      Java 里那句 setRotation(expanded ? 0 : 180) 逻辑不用动，chevron 转 180 度正好朝上。
+    · 状态胶囊（tv_status / tv_ctrl_summary）的默认底色与字色用主题属性；
+      运行中 Java 会按 空闲/正常/警告 三种语义换 drawable 与 @color/state_*_text。
+    · 勾选框显式用 MaterialCheckBox：framework <CheckBox> 在未安装 AppCompat viewInflater 的
+      Activity 里不会套用主题的 checkboxStyle，界面会退回老式方块。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_bg"
+    android:background="?android:attr/colorBackground"
     android:orientation="vertical">
 
     <!-- 坐标设置（可折叠） -->
     <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.MockGPS.Card.Glass"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginTop="10dp"
-        android:layout_marginEnd="12dp"
-        app:cardBackgroundColor="@color/card_bg"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="3dp">
+        android:layout_marginEnd="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="14dp"
-            android:paddingTop="12dp"
-            android:paddingEnd="14dp"
-            android:paddingBottom="12dp">
+            android:padding="?attr/dimenCardPadding">
 
             <!-- 标题行 + 折叠开关 -->
             <LinearLayout
@@ -42,8 +47,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="坐标设置（WGS-84）"
-                    android:textColor="@color/text_secondary"
+                    android:text="坐标设置"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -51,10 +56,11 @@
                     android:id="@+id/btn_ctrl_toggle"
                     android:layout_width="34dp"
                     android:layout_height="34dp"
-                    android:background="@drawable/bg_map_btn"
+                    android:background="@drawable/bg_glass_pill"
                     android:contentDescription="收起 / 展开坐标设置"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_arrow_drop_down" />
+                    android:src="@drawable/ic_chevron_down"
+                    app:tint="?attr/colorIconSecondary" />
             </LinearLayout>
 
             <!-- 折叠后的一句话摘要 -->
@@ -68,7 +74,7 @@
                 android:paddingEnd="12dp"
                 android:paddingBottom="9dp"
                 android:text="未启用虚拟定位"
-                android:textColor="@color/state_idle_text"
+                android:textColor="?attr/colorStateIdleText"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -125,40 +131,33 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_apply"
+                        style="@style/Widget.MockGPS.Button.Primary"
                         android:layout_width="0dp"
-                        android:layout_height="46dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginEnd="5dp"
                         android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
                         android:paddingStart="0dp"
                         android:paddingEnd="0dp"
-                        android:text="应用虚拟定位"
-                        android:textSize="14sp"
-                        app:cornerRadius="14dp" />
+                        android:text="应用虚拟定位" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_stop"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.MockGPS.Button.Ghost"
                         android:layout_width="0dp"
-                        android:layout_height="46dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
                         android:paddingStart="0dp"
                         android:paddingEnd="0dp"
-                        android:text="停止"
-                        android:textSize="14sp"
-                        app:cornerRadius="14dp" />
+                        android:text="停止" />
                 </LinearLayout>
 
-                <CheckBox
+                <com.google.android.material.checkbox.MaterialCheckBox
                     android:id="@+id/cb_continuous"
                     android:layout_width="match_parent"
-                    android:layout_height="34dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:minHeight="34dp"
+                    android:minHeight="@dimen/button_height_sm"
                     android:text="持续模拟（每秒刷新，防被其他 App 清除）"
                     android:textSize="13sp" />
 
@@ -172,18 +171,16 @@
                     android:paddingEnd="13dp"
                     android:paddingBottom="10dp"
                     android:text="未启用"
-                    android:textColor="@color/state_idle_text"
+                    android:textColor="?attr/colorStateIdleText"
                     android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_open_dev"
-                    style="@style/Widget.Material3.Button.TextButton"
+                    style="@style/Widget.MockGPS.Button.Ghost"
                     android:layout_width="match_parent"
-                    android:layout_height="42dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:minHeight="42dp"
-                    android:text="打开开发者设置（授权模拟定位）"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="前往开发者选项"
                     android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
@@ -191,16 +188,14 @@
 
     <!-- 行政区 / 收藏（整块占满剩余高度） -->
     <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.MockGPS.Card.Glass"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginStart="12dp"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="12dp"
         android:layout_marginBottom="10dp"
-        android:layout_weight="1"
-        app:cardBackgroundColor="@color/card_bg"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="3dp">
+        android:layout_weight="1">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -209,12 +204,11 @@
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tabs_picker"
+                style="@style/Widget.MockGPS.Tab.Pill"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                app:tabIndicatorFullWidth="false"
-                app:tabMode="fixed">
+                android:layout_marginEnd="4dp">
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
@@ -256,9 +250,11 @@
                             android:id="@+id/btn_division_back"
                             android:layout_width="34dp"
                             android:layout_height="34dp"
-                            android:background="@drawable/bg_map_btn"
+                            android:background="@drawable/bg_glass_pill"
                             android:contentDescription="返回上级"
+                            android:scaleType="centerInside"
                             android:src="@drawable/ic_arrow_back"
+                            app:tint="?attr/colorIconPrimary"
                             android:visibility="invisible" />
 
                         <TextView
@@ -270,7 +266,7 @@
                             android:ellipsize="end"
                             android:singleLine="true"
                             android:text="选择大区"
-                            android:textColor="@color/text_primary"
+                            android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -278,7 +274,7 @@
                             android:id="@+id/tv_division_count"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp" />
                     </LinearLayout>
 
@@ -298,7 +294,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -315,16 +311,11 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_fav_add"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        style="@style/Widget.MockGPS.Button.Tonal"
                         android:layout_width="match_parent"
-                        android:layout_height="46dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minHeight="46dp"
+                        android:layout_height="wrap_content"
                         android:text="收藏当前坐标（可备注）"
-                        android:textSize="14sp"
-                        app:cornerRadius="14dp"
-                        app:icon="@drawable/ic_star"
+                        app:icon="@drawable/ic_star_outline"
                         app:iconGravity="textStart"
                         app:iconPadding="6dp" />
 
@@ -348,7 +339,7 @@
                         android:paddingTop="18dp"
                         android:paddingBottom="18dp"
                         android:text="还没有收藏点\n点上方按钮，或切到地图页收藏当前选中的位置"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="13sp"
                         android:visibility="visible" />
                 </LinearLayout>

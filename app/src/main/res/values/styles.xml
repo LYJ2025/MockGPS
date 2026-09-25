@@ -1,11 +1,266 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 组件样式
+  全部引用主题属性（?attr/...），因此天然支持「方案 / 透明度 / 圆角 / 密度 / 动效 / 主色」切换。
+
+  ⚠ 一个已经踩过的硬伤，改版时必须避开：
+  MaterialCardView 的圆角、底色、描边有且只有一套机制 —— cardBackgroundColor /
+  cardCornerRadius / strokeColor / strokeWidth。它内部用自己的 MaterialShapeDrawable 当背景，
+  如果你另外写 android:background，会被它覆盖掉（或反过来），两套机制打架，结果不可预期。
+  所以：
+    · 卡片类（MaterialCardView） → 只用 card* 属性，见 Widget.MockGPS.Card.Glass
+    · 普通容器（LinearLayout / TextView / FrameLayout） → 用 android:background 指向
+      layer-list 背景，见 Widget.MockGPS.Surface.Glass
+  顶层那条内高光（决定"像不像玻璃"）在卡片上没有位置可放，
+  由 ThemeManager 在 booleanGlassSpecular 为 true 时以叠加 View 的方式补上。
+-->
 <resources>
 
-    <!-- 顶部主标签页文字：不依赖 Material 内部样式，避免版本差异 -->
+    <!-- ==================== 形状叠加（供 shapeAppearanceOverlay 使用） ==================== -->
+    <style name="ShapeAppearanceOverlay.MockGPS.Card" parent="">
+        <item name="cornerSize">?attr/dimenRadiusCard</item>
+    </style>
+    <style name="ShapeAppearanceOverlay.MockGPS.Pill" parent="">
+        <item name="cornerSize">50%</item>
+    </style>
+    <style name="ShapeAppearanceOverlay.MockGPS.Sheet" parent="">
+        <item name="cornerSizeTopLeft">?attr/dimenRadiusSheet</item>
+        <item name="cornerSizeTopRight">?attr/dimenRadiusSheet</item>
+    </style>
+
+    <!-- ==================== 玻璃卡片（MaterialCardView 原生机制） ==================== -->
+    <!--
+      v1.20 视觉修：
+      原写法同时给 strokeColor + cardBackgroundColor 半透明白，
+      在浅色页面上会看到 M3 父类默认的 outline 灰描边（和我们的白色描边叠加），
+      形成「白卡 + 灰外框 + 白内框」的双层割裂感。
+      改：strokeWidth 归零并去掉 strokeColor —— 层次完全交给这三样，不再叠描边：
+        ① 卡片底色 ?attr/colorGlassSurface（由「卡片不透明度」滑杆控制）；
+        ② elevation 的柔和投影；
+        ③ GlassBackdrop 刷在内容容器 background 上的淡主色染色。
+      ⚠️ 子样式若要描边，必须自己把 strokeWidth 写回来（见下方 Widget.MockGPS.Card.Solid）。
+    -->
+    <style name="Widget.MockGPS.Card.Glass" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">?attr/colorGlassSurface</item>
+        <item name="cardCornerRadius">?attr/dimenRadiusCard</item>
+        <item name="cardElevation">?attr/dimenCardElevation</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardPreventCornerOverlap">false</item>
+        <item name="cardUseCompatPadding">false</item>
+    </style>
+
+    <!-- 不透明卡片：主色/语义色块、需要挡住地图的浮层用它。
+         必须显式写回 strokeWidth —— 父样式 Glass 把它归零了，
+         只声明 strokeColor 是不会有任何可见描边的。 -->
+    <style name="Widget.MockGPS.Card.Solid" parent="Widget.MockGPS.Card.Glass">
+        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
+    </style>
+
+    <!-- ==================== 玻璃表面（普通容器） ==================== -->
+    <!-- 带内高光，适合 LinearLayout / FrameLayout / TextView 这类自己能吃 android:background 的控件 -->
+    <style name="Widget.MockGPS.Surface.Glass" parent="">
+        <item name="android:background">@drawable/bg_glass_card</item>
+        <item name="android:elevation">?attr/dimenCardElevation</item>
+    </style>
+    <style name="Widget.MockGPS.Surface.Glass.Solid" parent="">
+        <item name="android:background">@drawable/bg_glass_card_solid</item>
+        <item name="android:elevation">?attr/dimenCardElevation</item>
+    </style>
+
+    <!-- ==================== 按钮 ==================== -->
+    <style name="Widget.MockGPS.Button.Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">?attr/colorPrimary</item>
+        <item name="android:textColor">?attr/colorOnPrimary</item>
+        <item name="iconTint">?attr/colorOnPrimary</item>
+        <item name="cornerRadius">?attr/dimenRadiusButton</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Widget.MockGPS.Button.Ghost" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">?attr/colorPrimary</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+        <item name="iconTint">?attr/colorPrimary</item>
+        <item name="cornerRadius">?attr/dimenRadiusButton</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 次要按钮：用于「收藏 / 备注」这类非主操作 -->
+    <style name="Widget.MockGPS.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="backgroundTint">?attr/colorSecondaryContainer</item>
+        <item name="android:textColor">?attr/colorOnSecondaryContainer</item>
+        <item name="iconTint">?attr/colorOnSecondaryContainer</item>
+        <item name="cornerRadius">?attr/dimenRadiusButton</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 破坏性操作（清空轨迹 / 删除收藏） -->
+    <style name="Widget.MockGPS.Button.Danger" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">?attr/colorStateDanger</item>
+        <item name="android:textColor">?attr/colorStateDanger</item>
+        <item name="iconTint">?attr/colorStateDanger</item>
+        <item name="cornerRadius">?attr/dimenRadiusButton</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- ==================== 图标按钮 ==================== -->
+    <!--
+      地图浮层按钮：40dp 玻璃胶囊 + 图标。
+
+      图标着色在这里用 android:tint 而不是 app:tint，两条规则不要混：
+        · 布局 XML 里写 app:tint —— lint 会以 UseAppTint 报错拦截 android:tint，
+          而且 <ImageView>/<ImageButton> 在 AppCompatActivity 下会被替换成
+          AppCompatImageView/AppCompatImageButton，它们才读 app:tint。
+        · 共享 style 里写 android:tint —— style 的属性名不带命名空间前缀，
+          app:tint 在 <style> 里根本没法写；而且 style 可能被套到非 AppCompat 的
+          视图上（比如代码里 new 出来的 ImageView），android:tint 由 framework
+          ImageView 自 API 21 起直接支持，任何场合都生效。
+      两者最终效果一致；若哪天 app:tint 没生效，图标会退回 vector 自带的
+      @color/icon_* 兜底色，不会变成黑块。
+    -->
+    <style name="Widget.MockGPS.Button.MapFloat" parent="">
+        <item name="android:background">@drawable/bg_glass_pill</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:tint">?attr/colorIconPrimary</item>
+        <item name="android:padding">9dp</item>
+    </style>
+
+    <style name="Widget.MockGPS.IconButton" parent="">
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:tint">?attr/colorIconPrimary</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:minWidth">@dimen/touch_target_min</item>
+        <item name="android:minHeight">@dimen/touch_target_min</item>
+    </style>
+
+    <!-- 图标按钮的次级/三级语义变体（列表里的辅助操作、说明性图标） -->
+    <style name="Widget.MockGPS.IconButton.Secondary">
+        <item name="android:tint">?attr/colorIconSecondary</item>
+    </style>
+    <style name="Widget.MockGPS.IconButton.Tertiary">
+        <item name="android:tint">?attr/colorIconTertiary</item>
+    </style>
+
+    <!-- ==================== 分段控件 ==================== -->
+    <!--
+      用于 MaterialButtonToggleGroup 的子按钮（高德/卫星、折线/画笔）。
+      注意：这里刻意不覆盖 backgroundTint 与 strokeColor
+      —— M3 的 OutlinedButton 自带「选中/未选中」状态选择器，覆盖掉反而会丢失选中态。
+      只调几何与字号。
+    -->
+    <style name="Widget.MockGPS.Segmented" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/button_height_sm</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">?attr/dimenRadiusButton</item>
+    </style>
+
+    <!-- ==================== 输入框 ==================== -->
+    <style name="Widget.MockGPS.TextField" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/bg_text_field</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textColorHint">?attr/colorIconTertiary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textCursorDrawable">@null</item>
+    </style>
+
+    <!-- ==================== 底部弹层 ==================== -->
+    <style name="Widget.MockGPS.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.MockGPS.Sheet</item>
+        <item name="backgroundTint">?attr/colorSurface</item>
+    </style>
+
+    <!-- ==================== Snackbar ==================== -->
+    <style name="Widget.MockGPS.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.MockGPS.Pill</item>
+    </style>
+    <style name="Widget.MockGPS.Snackbar.TextView" parent="Widget.Material3.Snackbar.TextView">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <!-- ==================== 胶囊 Tab ==================== -->
+    <style name="Widget.MockGPS.Tab.Pill" parent="">
+        <item name="tabIndicatorColor">?attr/colorPrimary</item>
+        <item name="tabSelectedTextColor">?attr/colorPrimary</item>
+        <item name="tabTextColor">?attr/colorIconSecondary</item>
+        <item name="tabRippleColor">@null</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabMode">fixed</item>
+        <item name="tabGravity">fill</item>
+    </style>
+
+    <!-- ==================== 状态胶囊 ==================== -->
+    <!-- 未启用 / 空闲态 -->
+    <style name="Widget.MockGPS.Pill.Status" parent="">
+        <item name="android:background">@drawable/bg_status_pill</item>
+        <item name="android:paddingStart">13dp</item>
+        <item name="android:paddingEnd">13dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?attr/colorStateIdleText</item>
+    </style>
+    <!-- 已启用 / 正常态 -->
+    <style name="Widget.MockGPS.Pill.Status.Ok" parent="Widget.MockGPS.Pill.Status">
+        <item name="android:background">@drawable/bg_status_ok</item>
+        <item name="android:textColor">?attr/colorStateOkText</item>
+    </style>
+    <!-- 警告态（无权限 / 定位未开） -->
+    <style name="Widget.MockGPS.Pill.Status.Warn" parent="Widget.MockGPS.Pill.Status">
+        <item name="android:background">@drawable/bg_status_warn</item>
+        <item name="android:textColor">?attr/colorStateWarnText</item>
+    </style>
+
+    <!-- ==================== 字体层级 ==================== -->
+    <!--
+      注：设计规范里的字重 500 需要 android:textFontWeight（API 28+）。
+      为兼容 minSdk 21，这里统一用 bold 近似；在 API 28+ 上两者视觉差异很小。
+    -->
+    <style name="TextAppearance.MockGPS.TitleLarge" parent="">
+        <item name="android:textSize">19sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.MockGPS.TitleMedium" parent="">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.MockGPS.Body" parent="">
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="TextAppearance.MockGPS.Caption" parent="">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- 顶部主标签文字（保留原工程命名以避免改动过多） -->
     <style name="TabMainText">
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
     </style>
-
 </resources>

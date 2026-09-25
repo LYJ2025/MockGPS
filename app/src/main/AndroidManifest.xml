@@ -2,10 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 【关键】必须声明此权限，系统「选择模拟位置信息应用」列表才会列出本 App -->
+    <!--
+      【关键】必须声明此权限，系统「选择模拟位置信息应用」列表才会列出本 App。
+      · MockLocation：声明它并不代表真的会用 GPS 模拟功能，这只是个开关标记。
+      · ProtectedPermissions：ACCESS_MOCK_LOCATION 属于 signature 级权限，普通应用
+        永远拿不到它的运行时授权 —— 这正是本 App 被设计为「需要在开发者选项里手动选中」
+        的原因。声明它的唯一目的是让系统把这个包名列进模拟位置应用列表，
+        「拿不到授权」本身不构成缺陷，所以这里抑制该检查。
+    -->
     <uses-permission
         android:name="android.permission.ACCESS_MOCK_LOCATION"
-        tools:ignore="MockLocation" />
+        tools:ignore="MockLocation,ProtectedPermissions" />
 
     <!-- 地图瓦片需要联网 -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -25,12 +32,27 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="unspecified">
+            android:screenOrientation="unspecified"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          外观设置页：不导出。
+          主题用 Theme.MockGPS.Appearance（本质就是 Theme.MockGPS 的具名别名），
+          再在 onCreate 里由 ThemeManager 叠 ThemeOverlay。
+          单独起一个名字是为了以后想给设置页单独换底/去玻璃时不牵连主界面。
+        -->
+        <activity
+            android:name=".AppearanceActivity"
+            android:exported="false"
+            android:label="外观设置"
+            android:theme="@style/Theme.MockGPS.Appearance"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

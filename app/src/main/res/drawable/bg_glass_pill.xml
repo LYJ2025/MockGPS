@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  地图浮层按钮 / 分段控件 / 提示胶囊的通用背景：玻璃胶囊。
+  底色、描边、圆角全部走主题属性，因此会跟随「玻璃强度 / 透明度 / 圆角预设」变化。
+
+  用途（取代历史资源 bg_map_btn、bg_map_hint）：
+    - 地图上的缩放 / 居中 / 收藏按钮
+    - 轨迹页的折叠按钮
+    - 地图底部「点击地图选点」提示条（文字用 ?attr/colorIconOnGlass 配对）
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorGlassSurface" />
+            <stroke
+                android:width="@dimen/glass_border_width"
+                android:color="?attr/colorGlassBorder" />
+            <corners android:radius="?attr/dimenRadiusButton" />
+        </shape>
+    </item>
+</layer-list>

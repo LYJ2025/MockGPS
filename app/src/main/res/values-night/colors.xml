@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 深色模式颜色映射
+  仅覆盖需要随深浅模式变化的键；未覆盖的键沿用 res/values/colors.xml。
+
+  玻璃在深色下的处理：改为「低 alpha 白蒙版」而不是深色叠加，
+  且整条透明度斜坡相对浅色模式压缩（0x0F ~ 0x2E，约 5.9% ~ 18%）。
+  原因：深色底上用 0.50~0.95 这种高 alpha 白会直接糊成白块，失去玻璃观感。
+-->
+<resources>
+
+    <!-- 深色模式背景：更柔和的深蓝灰，让半透明玻璃能透出色斑层次感 -->
+    <color name="app_bg">#0B0F14</color>
+    <color name="card_bg">#1A1F26</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Material3 角色兜底（深色） -->
+    <color name="surface_variant">#232A33</color>
+    <color name="on_surface_variant">#A8B0BC</color>
+    <color name="outline">#3A424C</color>
+    <color name="outline_variant">#2A3138</color>
+
+    <color name="accent_blue_container">#123A5A</color>
+    <color name="accent_blue_on_container">#CCE4F7</color>
+    <color name="accent_teal_container">#0C3D2C</color>
+    <color name="accent_teal_on_container">#BFEBD8</color>
+    <color name="accent_purple_container">#2A2660</color>
+    <color name="accent_purple_on_container">#DEDBFA</color>
+    <color name="accent_green_container">#22380A</color>
+    <color name="accent_green_on_container">#D6EBB4</color>
+    <color name="accent_amber_container">#4A2C00</color>
+    <color name="accent_amber_on_container">#F7DCB0</color>
+
+    <!-- 玻璃 -->
+    <color name="glass_border">#33FFFFFF</color>
+    <color name="glass_highlight">#40FFFFFF</color>
+    <color name="scrim">#99000000</color>
+
+    <!-- 玻璃透明度斜坡（深色压缩版，白蒙版 alpha 5.9% ~ 18%） -->
+    <color name="glass_surface_s50">#0FFFFFFF</color>
+    <color name="glass_surface_s55">#12FFFFFF</color>
+    <color name="glass_surface_s60">#16FFFFFF</color>
+    <color name="glass_surface_s65">#19FFFFFF</color>
+    <color name="glass_surface_s70">#1DFFFFFF</color>
+    <color name="glass_surface_s75">#20FFFFFF</color>
+    <color name="glass_surface_s80">#23FFFFFF</color>
+    <color name="glass_surface_s85">#27FFFFFF</color>
+    <color name="glass_surface_s90">#2AFFFFFF</color>
+    <color name="glass_surface_s95">#2EFFFFFF</color>
+
+    <!-- 文字 -->
+    <color name="text_primary">#E8EAED</color>
+    <color name="text_tertiary">#6E7885</color>
+
+    <!-- 图标 -->
+    <color name="icon_primary">#FFE8EAED</color>
+    <color name="icon_secondary">#FFA8B0BC</color>
+    <color name="icon_tertiary">#FF6E7885</color>
+    <color name="icon_on_glass_light">#FFE8EAED</color>
+
+    <!-- 状态 -->
+    <color name="state_idle_bg">#14FFFFFF</color>
+    <color name="state_idle_text">#A8B0BC</color>
+    <color name="state_ok_bg">#1F2A2018</color>
+    <color name="state_ok_text">#7FD8A8</color>
+    <color name="state_warn_bg">#33A85A00</color>
+    <color name="state_warn_text">#F0B27A</color>
+    <color name="state_danger">#F09595</color>
+    <color name="state_danger_bg">#33B5342F</color>
+
+    <color name="ic_launcher_background">#0B3D63</color>
+</resources>

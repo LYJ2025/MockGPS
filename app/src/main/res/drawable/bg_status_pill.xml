@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  状态胶囊背景（默认 = 空闲态）
+  运行时按状态切换：空闲 / 成功 / 警告 —— 通过 setBackgroundTintList 或
+  直接替换为 bg_status_idle / bg_status_ok / bg_status_warn（三份同形状不同色）。
+  形状统一：10dp 圆角 + 无描边，靠底色区分语义。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="?attr/colorStateIdleBg" />
+    <corners android:radius="10dp" />
+</shape>

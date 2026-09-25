@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 外观设置页的选项数组
+  与 tokens/theme-options.json 对齐，可直接喂给 Spinner / ChipGroup / 自定义分段控件。
+  labels 与 values 顺序一一对应。
+-->
+<resources>
+
+    <!--
+      v1.20：设计风格 / 玻璃强度 / 动效等级 这三组已经从外观设置页整组移除
+      （各自只剩唯一取值，没有可选项，留着卡片反而让人以为还能改）。
+      它们的唯一合法值只在 ThemeManager.DEF_SCHEME / DEF_GLASS / DEF_MOTION 三处常量里，
+      对应的 labels / values 数组都已删除 —— 这里不再保留任何相关定义。
+    -->
+
+    <string-array name="appearance_radius_labels">
+        <item>紧凑</item>
+        <item>标准</item>
+        <item>圆润</item>
+    </string-array>
+    <string-array name="appearance_radius_values">
+        <item>compact</item>
+        <item>standard</item>
+        <item>round</item>
+    </string-array>
+
+    <string-array name="appearance_accent_labels">
+        <item>淡蓝</item>
+        <item>青</item>
+        <item>紫</item>
+        <item>绿</item>
+        <item>橙</item>
+    </string-array>
+    <string-array name="appearance_accent_values">
+        <item>blue</item>
+        <item>teal</item>
+        <item>purple</item>
+        <item>green</item>
+        <item>amber</item>
+    </string-array>
+
+    <string-array name="appearance_dark_labels">
+        <item>跟随系统</item>
+        <item>浅色</item>
+        <item>深色</item>
+    </string-array>
+    <string-array name="appearance_dark_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+
+    <string-array name="appearance_density_labels">
+        <item>紧凑</item>
+        <item>标准</item>
+        <item>宽松</item>
+    </string-array>
+    <string-array name="appearance_density_values">
+        <item>compact</item>
+        <item>standard</item>
+        <item>comfortable</item>
+    </string-array>
+
+</resources>

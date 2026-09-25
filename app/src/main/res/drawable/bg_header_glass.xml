@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶部标题栏背景：半透明 + 顶部 1px 高光（参考 UI优化方案.html 的 .hdrA）。
+  真正的 backdrop-filter blur 由代码在 onCreate 里 window.setBackgroundBlurRadius(20)（API 31+）
+  补上；这里的 drawable 提供「半透明白底 + 底部描边 + 顶部高光」三层。
+  · 主体：半透明白（alpha 0.55），让下面的色斑能透过来；
+  · 顶部 1px 高光：白 95% 透明，模拟「被光照射的玻璃边」；
+  · 底部 1px 描边：白 60% 透明，模拟「玻璃下边沿」。
+  注意：?attr/colorPrimary 不再被使用 —— 主色已交给底部 Tab 与状态栏接管，
+  标题栏本身只做玻璃感，不抢戏。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 主体：半透明白 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#8CFFFFFF" />
+        </shape>
+    </item>
+    <!-- 顶部 1px 高光 -->
+    <item
+        android:height="1dp"
+        android:gravity="top">
+        <shape android:shape="rectangle">
+            <solid android:color="#F2FFFFFF" />
+        </shape>
+    </item>
+    <!-- 底部 1px 描边 -->
+    <item
+        android:height="1dp"
+        android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="#99FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

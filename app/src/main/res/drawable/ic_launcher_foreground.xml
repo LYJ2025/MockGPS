@@ -1,23 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自适应图标前景：蓝色定位针。108dp 画布，内容控制在中央 66dp 安全区内 -->
+<!--
+  自适应图标前景：品牌色定位针。108dp 画布，viewBox 沿用 24 网格以便复用 ic_pin 的几何。
+
+  两条必须遵守的约束：
+  1) 只能用 @color/，绝对不能用 ?attr/ —— 启动图标由「桌面启动器」用自己的主题上下文
+     去解包，取不到本应用的主题属性，写 ?attr 会取到默认值甚至报错。
+  2) 内容必须落在中央安全区 —— 而且必须按**圆形**来算，不是方形。
+     108dp 画布的安全区是**直径 66dp 的圆**（半径 33dp = 24 网格里的 7.33 单位）。
+     下面用 group 把 ic_pin 的 17.5 单位高缩到 14 单位（上下各 7 单位 ≈ 31.5dp），
+     落在圆内并留了一点余量。
+     ⚠️ 曾经用的是 0.9（高 15.75 单位，上下各 35.4dp > 33dp）—— 方框里看着没问题，
+     但启动器的圆形遮罩会把针尖切掉，真机截图确认过。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
 
-    <!-- 针头圆（圆心 54,45 半径 22） -->
-    <path
-        android:fillColor="#1976D2"
-        android:pathData="M54,23 a22,22 0 1,0 0,44 a22,22 0 1,0 0,-44 z" />
+    <!-- 缩放 0.8 并居中：p' = 0.8 * p + (2.4, 2.2)
+         按圆形安全区（半径 33dp）算出来的，别再改大。 -->
+    <group
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="2.4"
+        android:translateY="2.2">
 
-    <!-- 针尖三角，底边两端落在圆周上 -->
-    <path
-        android:fillColor="#1976D2"
-        android:pathData="M37.65,59.72 L70.35,59.72 L54,85.7 z" />
+        <!-- 针身（与 ic_pin 同一轮廓，此处取实心填充，小尺寸下更清晰） -->
+        <path
+            android:fillColor="@color/brand_primary"
+            android:pathData="M12 21 C12 21 6 15 6 9.5 A6 6 0 1 1 18 9.5 C18 15 12 21 12 21 Z" />
 
-    <!-- 白色内孔 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,35.5 a9.5,9.5 0 1,0 0,19 a9.5,9.5 0 1,0 0,-19 z" />
+        <!-- 针头内孔 -->
+        <path
+            android:fillColor="@color/white"
+            android:pathData="M12 7.6 A1.9 1.9 0 1 0 12 11.4 A1.9 1.9 0 1 0 12 7.6 Z" />
+    </group>
 </vector>

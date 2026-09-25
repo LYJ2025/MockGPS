@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MockGPS 设计包 · 尺寸资源
+  圆角 / 间距 / 图标 / 玻璃 四组。间距遵循 8pt 栅格。
+-->
+<resources>
+
+    <!-- ========== 圆角 ========== -->
+    <dimen name="radius_s">10dp</dimen>
+    <dimen name="radius_m">14dp</dimen>
+    <dimen name="radius_l">18dp</dimen>
+    <dimen name="radius_xl">24dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
+
+    <!-- 圆角预设（供外观设置切换） -->
+    <dimen name="radius_preset_compact_m">12dp</dimen>
+    <dimen name="radius_preset_compact_l">14dp</dimen>
+    <dimen name="radius_preset_compact_xl">18dp</dimen>
+    <dimen name="radius_preset_standard_m">14dp</dimen>
+    <dimen name="radius_preset_standard_l">18dp</dimen>
+    <dimen name="radius_preset_standard_xl">24dp</dimen>
+    <dimen name="radius_preset_round_m">18dp</dimen>
+    <dimen name="radius_preset_round_l">24dp</dimen>
+    <dimen name="radius_preset_round_xl">30dp</dimen>
+
+    <!-- ========== 间距（8pt 栅格） ========== -->
+    <dimen name="space_unit">8dp</dimen>
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_s">8dp</dimen>
+    <dimen name="space_m">12dp</dimen>
+    <dimen name="space_l">16dp</dimen>
+    <dimen name="space_xl">24dp</dimen>
+    <dimen name="space_xxl">32dp</dimen>
+
+    <!-- ========== 卡片内边距（外观设置 → 密度 的三档落点） ========== -->
+    <dimen name="card_padding_compact">12dp</dimen>
+    <dimen name="card_padding_standard">16dp</dimen>
+    <dimen name="card_padding_comfortable">20dp</dimen>
+
+    <!--
+      ========== 图标 ==========
+      这里只有「栅格」和「尺寸档位」。**故意没有 icon_stroke 之类的描边 dimen**：
+      VectorDrawable 的 strokeWidth 在编译期就固化进资源，运行时改 dimen 不会重绘描边。
+      需要不同描边粗细时，做法是各生成一套图标资源（ic_pin.xml / ic_pin_bold.xml），
+      由主题或代码选 drawable。
+
+      现状说明（改版时按这个判断，别照抄"应该被用到了"的假设）：
+      · touch_target_min 被 Widget.MockGPS.IconButton 引用；
+      · icon_size_* 目前没有任何消费点 —— 布局里写的是字面 dp（如 18dp / 20dp）。
+        保留它们是为了新建界面时有统一的档位可选，避免每次现编一个数。
+      本文件的 dimen 由 tools/verify_mockgps.py 的第 [7] 项守着：除下面这份清单外的
+      "定义但无人引用" 都会被报错，所以删掉某个档位前请先确认它真的用不到。
+    -->
+    <dimen name="icon_grid">24dp</dimen>
+    <dimen name="icon_live_area">20dp</dimen>
+    <dimen name="icon_size_xs">16dp</dimen>
+    <dimen name="icon_size_s">20dp</dimen>
+    <dimen name="icon_size_m">24dp</dimen>
+    <dimen name="icon_size_l">28dp</dimen>
+    <dimen name="icon_size_xl">32dp</dimen>
+    <dimen name="touch_target_min">48dp</dimen>
+
+    <!-- ========== 玻璃 ========== -->
+    <dimen name="glass_border_width">1dp</dimen>
+    <dimen name="glass_inner_highlight">1dp</dimen>
+
+    <!-- ========== 控件 ========== -->
+    <dimen name="button_height">46dp</dimen>
+    <dimen name="button_height_sm">34dp</dimen>
+    <dimen name="map_float_button">40dp</dimen>
+    <dimen name="card_elevation_default">2dp</dimen>
+    <dimen name="card_elevation_liquid">0dp</dimen>
+</resources>

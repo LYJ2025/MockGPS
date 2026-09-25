@@ -9,7 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
-import android.widget.CheckBox;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.tabs.TabLayout;
@@ -46,7 +47,7 @@ public class HomeFragment extends Fragment {
     }
 
     private EditText etLat, etLng;
-    private CheckBox cbContinuous;
+    private MaterialCheckBox cbContinuous;
     private TextView tvStatus;
 
     // ---- 行政区下钻 ----
@@ -88,7 +89,11 @@ public class HomeFragment extends Fragment {
             setStatus("虚拟定位已停止", 0);
             toast("已停止虚拟定位");
         });
-        v.findViewById(R.id.btn_open_dev).setOnClickListener(x -> activity().openDevSettings());
+        // 「前往开发者选项」入口：跳到系统开发者选项页，用户在「选择模拟位置信息应用」
+        // 里手动选中本 App（系统不允许应用代开，无需任何无障碍权限）。
+        btnDev = v.findViewById(R.id.btn_open_dev);
+        btnDev.setOnClickListener(x -> DevSettings.openDevSettings(requireContext()));
+        btnDev.setOnLongClickListener(null);
         cbContinuous.setOnCheckedChangeListener((b, checked) -> activity().setContinuous(checked));
 
         setupCollapse(v);
@@ -114,6 +119,19 @@ public class HomeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         syncFromState();
+        refreshGrantButton();
+    }
+
+    /** 按当前的模拟位置授权状态刷新那颗按钮的文案。 */
+    private void refreshGrantButton() {
+        if (btnDev == null) {
+            return;
+        }
+        if (activity().isMockLocationGranted()) {
+            btnDev.setText("已授权为模拟位置应用");
+        } else {
+            btnDev.setText("前往开发者选项");
+        }
     }
 
     /** 时间长不看时把「坐标设置」折叠起来，把整屏高度让给行政区 / 收藏列表 */
@@ -121,6 +139,9 @@ public class HomeFragment extends Fragment {
     private TextView tvCtrlSummary;
     private ImageButton btnCtrlToggle;
     private boolean ctrlExpanded = true;
+
+    /** 「一键授权模拟位置」按钮，文案按当前授权状态刷新。 */
+    private TextView btnDev;
 
     private void setupCollapse(View v) {
         panelCtrl = v.findViewById(R.id.panel_ctrl);
@@ -144,6 +165,10 @@ public class HomeFragment extends Fragment {
         try {
             double lat = Double.parseDouble(etLat.getText().toString().trim());
             double lng = Double.parseDouble(etLng.getText().toString().trim());
+            // "NaN" / "Infinity" 也能被 parseDouble 成功解析（不抛异常），
+            // 必须显式挡掉，否则会被写进共享状态并把坐标污染成 NaN。
+            if (!Double.isFinite(lat) || !Double.isFinite(lng)) return;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
             activity().getState().set(lat, lng);
         } catch (NumberFormatException ignored) {
             // 输入未完成时不同步
@@ -173,7 +198,8 @@ public class HomeFragment extends Fragment {
             toast("经纬度格式不正确");
             return;
         }
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lng)
+                || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
             setStatus("经纬度超出有效范围", 2);
             toast("经纬度超出有效范围");
             return;
@@ -403,7 +429,8 @@ public class HomeFragment extends Fragment {
             toast("请先设置有效的经纬度");
             return;
         }
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lng)
+                || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
             toast("经纬度超出有效范围");
             return;
         }
@@ -507,11 +534,13 @@ public class HomeFragment extends Fragment {
         int fg = kind == 1 ? R.color.state_ok_text
                 : kind == 2 ? R.color.state_warn_text : R.color.state_idle_text;
         tvStatus.setBackgroundResource(bg);
-        tvStatus.setTextColor(requireContext().getColor(fg));
+        // 必须用 ContextCompat.getColor：Context.getColor(int) 需要 API 23，而 minSdk 是 21，
+        // 直接调在 21/22 上会抛 NoSuchMethodError（这里原来的写法就是直接调 getColor）。
+        tvStatus.setTextColor(ContextCompat.getColor(requireContext(), fg));
         if (tvCtrlSummary != null) {
             tvCtrlSummary.setText(text);
             tvCtrlSummary.setBackgroundResource(bg);
-            tvCtrlSummary.setTextColor(requireContext().getColor(fg));
+            tvCtrlSummary.setTextColor(ContextCompat.getColor(requireContext(), fg));
         }
     }
 

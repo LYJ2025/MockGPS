@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 真实 GPS 位置蓝点：外圈半透明光晕 + 白色描边 + 蓝色实心 -->
+<!--
+  真实 GPS 位置蓝点：外圈品牌色光晕 + 白色隔离环 + 品牌色实心。
+  颜色一律走 @color/，跟随品牌色定义统一，不再散落 #3D7BF5 这类历史色值。
+  （map 上会直接 setIcon 使用，尺寸由 26dp 决定与 MarkerView 的 anchor 配合。）
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="oval">
             <size
                 android:width="26dp"
                 android:height="26dp" />
-            <solid android:color="#333D7BF5" />
+            <solid android:color="@color/brand_primary_20" />
         </shape>
     </item>
     <item
@@ -15,7 +19,7 @@
         android:right="5dp"
         android:top="5dp">
         <shape android:shape="oval">
-            <solid android:color="#FFFFFFFF" />
+            <solid android:color="@color/white" />
         </shape>
     </item>
     <item
@@ -24,7 +28,7 @@
         android:right="8dp"
         android:top="8dp">
         <shape android:shape="oval">
-            <solid android:color="#3D7BF5" />
+            <solid android:color="@color/brand_primary" />
         </shape>
     </item>
 </layer-list>
