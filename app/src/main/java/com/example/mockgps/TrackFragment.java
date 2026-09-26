@@ -54,6 +54,30 @@ public class TrackFragment extends BaseMapFragment {
     private MaterialSwitch swTrail;
     private MainActivity.TrailListener trailListener;
 
+    /**
+     * 一次性布局监听：视图真正完成布局（有尺寸且已 attach 到 Window）后做一次可靠补画。
+     *
+     * <p>这是修「切回轨迹页后蓝点 / 绿起点 / 绿线消失」的关键。原先靠
+     * {@code v.post(() -> redrawAll())} 补画，但 {@code post} 在 ViewPager2 重建场景里
+     * 可能早于 {@code onAttachedToWindow} 触发 —— 那时 {@code mapView.invalidate()} 会被合并丢弃，
+     * 第一次自然 onDraw 时图层还是空的，画面就停在「什么都没有」，直到手动平移/缩放才出现。
+     * {@code onGlobalLayout} 一定在「测量 + 布局 + attach」之后回调，是画一次最可靠的时机。
+     */
+    private final android.view.ViewTreeObserver.OnGlobalLayoutListener redrawOnLayout =
+            new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    if (mapView == null || getView() == null) return;
+                try {
+                    getView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                } catch (Throwable ignored) { }
+                // 关键：不要在这里同步 redrawAll()。onGlobalLayout 仍处于布局流程中，
+                // 此刻 invalidate() 会被合并丢弃，第一次 onDraw 时 overlay 还是空的，
+                // 表现就是"切回轨迹页什么都没有"。推迟到下一帧再画才真正渲染出来。
+                if (mapView != null) mapView.post(() -> redrawAll());
+                }
+            };
+
     /** 整个轨迹控制面板（卡片）。绘制中隐藏它，把地图完全让出来。 */
     private View cardTrack;
     /** 绘制中的迷你悬浮窗（只有「结束画 / 结束设点」一个按钮）。 */
@@ -173,6 +197,9 @@ public class TrackFragment extends BaseMapFragment {
             if (mapView == null || playbackMarker == null) return;
             playbackMarker.setPosition(toMapPoint(p.lat, p.lng));
             playbackMarker.setVisible(true);
+            // 蓝点位置变了必须触发一次重绘，否则地图不会自动刷新（之前只改了 Marker 位置
+            // 却没 invalidate —— 这就是"有数据、不显示"的直接原因之一）。
+            if (mapView != null) mapView.invalidate();
             updateProgress(dist, total);
             if (fin) {
                 toast("轨迹模拟完成（已到终点）");
@@ -187,19 +214,29 @@ public class TrackFragment extends BaseMapFragment {
         updateDrawButton();
         updateTrackHint();
 
-        // 视图建好后补一次重画（切页重建后必须重画路线/轨迹/蓝点）。
+        // 视图建好后安排补画（切页重建后必须重画路线/轨迹/蓝点）。
         //
-        // 关键点：onCreateView 此刻 MapView 还没完成测量（宽高未定、尚未 attach 到 window），
-        // 直接 invalidate() 在 osmdroid + ViewPager2 重建场景里几乎必然画不出 overlay ——
-        // 这正是「切回轨迹页蓝点/起点/绿线消失」的真正根因之一。
-        // 所以 post 到视图布局完成之后再做，保证投影尺寸就绪、overlay 真正渲染出来。
+        // 关键点：onCreateView 此刻 MapView 还没完成测量 / attach，直接 invalidate() 在
+        // osmdroid + ViewPager2 重建场景里会被合并丢弃，第一次 onDraw 时 overlay 还是空的 ——
+        // 这正是「切回轨迹页蓝点/起点/绿线消失」的根因。因此补画一律延后到「下一帧 / attach 之后」
+        // 再执行（见下方三重保险调度，以及 redrawOnLayout 里也是 post 到下一帧）。
         updateTrackButton();
         // 恢复面板 / 悬浮窗的显隐：polyAdding 是 Fragment 字段，跨视图重建会保留，
         // 不恢复的话切页回来会出现"面板不见了但也没在设点"的错位
         setDrawingUi(polyAdding || activity().getTrackEngine().isDrawing());
-        // post 到布局完成后：切页重建时这是「唯一一定能在有尺寸后跑一次」的补画时机，
-        // 即便 onResume 因 ViewPager2 时序没被可靠调用，这里也能把图层救回来。
-        v.post(() -> redrawAll());
+        // 多重保险，确保切回轨迹页后蓝点 / 绿起点 / 绿线一定被重绘出来：
+        //   ① onGlobalLayout（布局完成，内部再 post 到下一帧）
+        //   ② mapView.post（当前帧之后）
+        //   ③ postDelayed 250ms 兜底 —— 等价于"等一会让它自己出现"，这正是之前手动
+        //      平移 / 缩放能救回来的原因，这里把它自动化。三种时机里至少有一种一定在
+        //      视图真正可见之后触发，绝不会出现"卡在空白、除非手动操作"。
+        try {
+            v.getViewTreeObserver().addOnGlobalLayoutListener(redrawOnLayout);
+        } catch (Throwable ignored) { }
+        if (mapView != null) {
+            mapView.post(() -> redrawAll());
+            mapView.postDelayed(() -> redrawAll(), 250);
+        }
         return v;
     }
 
@@ -453,9 +490,14 @@ public class TrackFragment extends BaseMapFragment {
     @Override
     protected void centerOnRealIfIdle(boolean animate) {
         MainActivity act = (MainActivity) getActivity();
+        // 有路线就认定用户在看这条路线，绝不自动跳回真实位置：
+        // 否则切页回来路线 / 蓝点 / 绿线会被拽到屏幕外，看起来就像「消失了」。
         if (act != null && act.getTrackEngine().nodeCount() >= 1) {
             return;
         }
+        // getActivity() 为空（极端时序）时，宁可什么都不做，也别退化到「跳回真实位置」
+        // 把内容拽出屏幕 —— 那正是「切回轨迹页元素消失」的伪装表现之一。
+        if (act == null) return;
         super.centerOnRealIfIdle(animate);
     }
 
@@ -869,6 +911,9 @@ public class TrackFragment extends BaseMapFragment {
             activity().addTrailListener(trailListener);
             // 三个重画各自独立兜底（见 redrawAll），一个失败不连累另外两个
             redrawAll();
+            // 兜底：onResume 里的 invalidate 在某些 ROM / 时序下仍可能被合并丢弃，
+            // 延后 250ms 再画一次，保证切回轨迹页后一定渲染出来。
+            if (mapView != null) mapView.postDelayed(() -> redrawAll(), 250);
             if (!activity().getTrackEngine().isRunning()) updateTrackHint();
             // 切走再切回时，绘制状态可能仍是「绘制中」——把面板/悬浮窗显隐同步回来，
             // 否则会出现"面板不见了但也没在画"的错位。
@@ -928,6 +973,12 @@ public class TrackFragment extends BaseMapFragment {
         swTrail = null;
         cardTrack = null;
         cardDrawEnd = null;
+        // 解绑一次性布局监听：视图已销毁，避免残留监听回调到空 MapView
+        try {
+            if (getView() != null) {
+                getView().getViewTreeObserver().removeOnGlobalLayoutListener(redrawOnLayout);
+            }
+        } catch (Throwable ignored) { }
         super.onDestroyView();
     }
 }

@@ -11,7 +11,6 @@
 核心能力：**坐标定位**（输入 / 地图点选 / 行政区一键跳转）、**轨迹模拟**（折线或手绘路线 + 匀速播放 + 精度抖动）、
 **玻璃拟态外观**（透明度 / 圆角 / 密度 / 主色 / 深浅模式可调）。
 
-无需ROOT！！！
 > ⚠️ 用途提示：本工具依赖系统「模拟位置」能力，只在你已经授权的应用里生效。请仅用于合法合规的测试与开发，不要用于欺骗、欺诈或违反平台规则的行为。
 
 ---
@@ -88,7 +87,7 @@
 
 ### 方式一：下载预编译 APK（推荐）
 
-到本仓库的 **Releases** 页面下载最新版 `app-debug-vX.X.apk`（当前为 **v1.26**），传到手机后用文件管理器点击安装即可。
+到本仓库的 **Releases** 页面下载最新版 `app-debug-vX.X.apk`（当前为 **v1.30**），传到手机后用文件管理器点击安装即可。
 
 > 请直接安装 `.apk` 文件，**不要**下载 `.zip` 再在手机里解压——手机点 zip 不会把它当作安装包，会提示「无法打开文件」。
 > 若必须在手机上传，用电脑解压后将 apk 传进手机再安装。
@@ -261,6 +260,8 @@ App 有三个页面，顶部标签切换（也支持左右滑动）：**主页**
 | **v1.24** | v1.23 仍未彻底修好：真机实测切回轨迹页蓝点 / 绿起点 / 绿轨迹仍不显示。追加两处根因：① **重建后补画时机太早**——`onCreateView` 里直接 `invalidate()` 时，新 `MapView` 还没完成测量 / attach，osmdroid 在 ViewPager2 重建场景下几乎必然画不出 overlay（经典坑）；改为 `view.post()` 把整组重画推迟到布局完成后，保证投影尺寸就绪、overlay 真正渲染；② **三个重画顺序耦合**——原来 `onResume` 里 `redrawRoute()` → `redrawTrail()` → `restorePlaybackMarker()` 顺序写在同一段，只要 `redrawRoute()` 抛一次异常被外层 `catch` 吞掉，后面两个整段被跳过（正好对应"蓝点 + 绿起点 + 绿轨迹一起消失"，而蓝色规划线因写在最前反而还在）。新增 `redrawAll()` 把三次重画各自独立 try/catch，`onCreateView`(post) 与 `onResume` 都走它，任一失败不影响其余两个。 |
 | **v1.25** | 诊断版（不改行为，只加日志）：为定位 v1.24 若仍不修复的真实原因，新增 `DiagLog` 诊断日志类——在轨迹页的 `onCreateView` / `onResume` / `redrawAll` / `onDestroyView` 及 `BaseMapFragment.setupMap` 中心恢复处记录**地图宽高（判断是否还没布局）、各图层是否为空、路线 / 轨迹点数、每个标记最终 visible、任何异常的完整堆栈**；写入三处：应用专属目录 `diag.txt`、公共 `Download/MockGPS-diag/diag.txt`（文件管理器直接可见）、logcat（TAG `MockGPS-DIAG`）。用户复现后取回该文件即可精确定位，不用再猜。 |
 | **v1.26** | 依据 v1.25 诊断日志定位到真凶并修复：日志显示切页全程**无 `onDestroyView`**（轨迹页根本没被销毁重建，之前的"重建修复"方向是错的），且 `setupMap` 时中心是 `0,0`。真因是 `BaseMapFragment.onResume` 里的 `centerOnRealIfIdle(true)`——轨迹模拟期间 `state.valid=false`、`state.lat=NaN`（`startTrack` 有意不写 state），于是每次切回轨迹页它都把地图中心拽回**真实 GPS 坐标**，而用户画的假路线在别处，路线/蓝点/绿线全被甩到屏幕外，看起来像"消失"。修复：`TrackFragment` 覆盖 `centerOnRealIfIdle`，**只要已有一条路线（`nodeCount()>=1`）就绝不自动回真实位置**，没有路线时才沿用基类默认。同时 `redrawAll` 日志补记地图中心，便于复核。 |
+| **v1.27** | 修「轨迹模拟运行中切回轨迹页，蓝点 / 绿色起点 / 绿色已走轨迹不显示」：tick 回调节点（播放蓝点置可见）后补 `mapView.invalidate()`；`redrawOnLayout` 由同步 `redrawAll()` 改为 `mapView.post(() -> redrawAll())`（等布局完成再画，解决 ViewPager2 重建场景下 `MapView` 未 attach、overlay 未及时渲染的经典坑）；`onCreateView` 末尾三重保险（`onGlobalLayout` 内 `post` + 直接 `post` + `postDelayed(250)`），`onResume` 末尾 `postDelayed(() -> redrawAll(), 250)` 兜底。版本号 1.27。 |
+| **v1.28 – v1.30** | 新增「轨迹模拟运行中禁止切页」：运行时点击顶部「主页 / 选点」Tab 不再跳转，仅 Toast 提示「请先停止模拟轨迹」；暂停 / 停止 / 自然结束后自动恢复切页。实现迭代：① v1.28 在 `onTabSelected` 里 `tab.select()` 弹回轨迹页，vivo 上因 `TabLayoutMediator` 双向同步触发 `onTabSelected` 递归 `StackOverflowError`；② v1.29 改用 `setCurrentItem(2)` 回锁，但 Tab 点击先切走、回锁被覆盖，只剩弹窗没真正拦住；③ v1.30 改为在 `refreshNavLock()` 中给每个 Tab 视图挂 `OnTouchListener` 返回 `true` 直接吞掉触摸事件，从源头禁用一切切页操作，无递归、无切走。版本号 1.28 → 1.30。 |
 
 ---
 

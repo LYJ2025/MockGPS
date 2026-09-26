@@ -10,8 +10,8 @@ android {
         applicationId "com.example.mockgps"
         minSdk 21
         targetSdk 34
-        versionCode 27
-        versionName "1.26"
+        versionCode 31
+        versionName "1.30"
     }
 
     // 生成 BuildConfig（CrashLogger 里用它记录版本号；AGP 8 起默认关闭）

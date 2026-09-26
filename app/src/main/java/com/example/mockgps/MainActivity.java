@@ -16,6 +16,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -128,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
     private final TrackEngine trackEngine = new TrackEngine();
     /** true：mock 引擎当前在跑轨迹；false：普通固定点模拟 */
     private boolean trackMode = false;
+    private TabLayout mTabs; // 顶部三页分页栏：轨迹模拟运行中禁用其点击切换
 
     /**
      * 实际推出去的轨迹点（含抖动），跨页面共享。
@@ -206,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
         trackEngine.start(kmh);
         handler.removeCallbacks(tick);
         handler.postDelayed(tick, 1000);
+        refreshNavLock();   // 运行中 → 禁用一切页面切换
         return true;
     }
 
@@ -218,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
             locationManager.setTestProviderEnabled(PROVIDER, false);
         } catch (SecurityException ignored) {
         }
+        refreshNavLock();   // 已停止 → 恢复页面切换
     }
 
     // ---------------- 轨迹「开始 / 停止 / 继续」三态 ----------------
@@ -230,6 +235,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void pauseTrack() {
         trackEngine.pause();
+        refreshNavLock();   // 暂停 → 恢复页面切换
     }
 
     /** 从暂停处继续。已经跑完（finished）时什么也不做。 */
@@ -239,6 +245,7 @@ public class MainActivity extends AppCompatActivity {
             handler.removeCallbacks(tick);
             handler.postDelayed(tick, 1000);
         }
+        refreshNavLock();   // 继续 → 重新禁用页面切换
     }
 
     /**
@@ -250,6 +257,45 @@ public class MainActivity extends AppCompatActivity {
     public void clearTrackProgress() {
         lastTrackPoint = null;
         trackEngine.stop();     // running = false, finished = true → 按钮回「开始」
+        refreshNavLock();       // 停止 → 恢复页面切换
+    }
+
+    /**
+     * 轨迹模拟「进行中」时禁用一切页面切换，其余状态恢复正常。
+     *
+     * <p>实现要点：本 App 的左右滑动切换早已关闭（{@code setUserInputEnabled(false)}），
+     * 能切页的唯一入口就是顶部 Tab 点击。所以这里在锁定态给每个 Tab 的视图挂一个
+     * {@code OnTouchListener} 并返回 {@code true} 把触摸事件直接吞掉 —— 点击不会传导到
+     * TabLayout，分页根本切不动（点非当前页时顺带提示）。解锁态移除监听、恢复可点。
+     *
+     * <p>相比「先切走再 setCurrentItem 锁回」，吞事件是从源头禁止，不会出现
+     * 「只弹了提示、页面却切走了」的漏网，也没有重入回调导致递归闪退的风险。
+     */
+    private void refreshNavLock() {
+        if (mTabs == null) return;
+        boolean locked = trackEngine.isRunning();
+        int count = mTabs.getTabCount();
+        for (int i = 0; i < count; i++) {
+            final TabLayout.Tab tab = mTabs.getTabAt(i);
+            if (tab == null) continue;
+            final View tabView = tab.view;
+            if (tabView == null) continue;
+            final int idx = i;
+            if (locked) {
+                tabView.setOnTouchListener((v, e) -> {
+                    if (e.getAction() == MotionEvent.ACTION_DOWN
+                            && mTabs.getSelectedTabPosition() != idx) {
+                        Toast.makeText(MainActivity.this, "请先停止模拟轨迹",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    return true; // 吞掉触摸：运行中禁止任何分页切换
+                });
+                tabView.setClickable(false);
+            } else {
+                tabView.setOnTouchListener(null);
+                tabView.setClickable(true);
+            }
+        }
     }
 
     // ---------------- 定位引擎 ----------------
@@ -341,11 +387,17 @@ public class MainActivity extends AppCompatActivity {
             pager.setOffscreenPageLimit(1);
             pager.setUserInputEnabled(false); // 关闭左右滑动翻页：避免地图手势误触发翻页，改用顶部 Tab 点击切换
 
-            TabLayout tabs = findViewById(R.id.tabs_main);
-            new TabLayoutMediator(tabs, pager,
+            mTabs = findViewById(R.id.tabs_main);
+            new TabLayoutMediator(mTabs, pager,
                     (tab, position) -> tab.setText(
                             position == 0 ? "主页" : position == 1 ? "选点" : "轨迹")
             ).attach();
+
+            // 轨迹模拟「进行中」时禁用一切页面切换：直接吞掉顶部 Tab 的点击触摸（切都切不动），
+            // 而不是「先切走再锁回」——后者在 TabLayout+ViewPager2 点击链路上不可靠，会照样切走。
+            // 注：左右滑动早已被禁（见上方 setUserInputEnabled(false)），唯一入口就是 Tab 点击。
+            // 暂停 / 停止 / 结束后 isRunning() 自动变 false，自动恢复，无需额外恢复逻辑。
+            refreshNavLock();
 
             requestPermissions();
 
@@ -459,6 +511,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        refreshNavLock(); // 按当前引擎状态同步导航锁（如运行中从别处返回本页）
         // 从外观设置页返回：设置变过就重建自己，让新外观真正生效
         if (appliedThemeGeneration >= 0
                 && appliedThemeGeneration != ThemeManager.generation(this)) {

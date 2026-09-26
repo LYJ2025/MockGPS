@@ -17,3 +17,12 @@ Thumbs.db
 # ---- 预编译包（发布见 GitHub Releases，不入库）----
 app-debug-*.apk
 app-debug-*.zip
+
+# ---- 本地笔记 / 交付说明（仅本地使用，禁止入库）----
+# AGENTS.md：AI 协作笔记、内部技术方案
+# PUSH.md：发布流程备忘
+/AGENTS.md
+/PUSH.md
+
+# ---- git bundle（离线传递用，不入库）----
+*.bundle
