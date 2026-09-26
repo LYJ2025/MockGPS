@@ -49,6 +49,8 @@ public final class CrashLogger {
 
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
             try {
+                // 先把 BugTrace 队列中所有日志同步落盘，并把最近记录附加到崩溃报告
+                BugTrace.flushSync();
                 String text = buildReport(thread, throwable);
                 Log.e(TAG, "uncaught exception:\n" + text);
                 // 优先写应用专属目录
@@ -76,6 +78,9 @@ public final class CrashLogger {
         pw.println("device : " + Build.MANUFACTURER + " " + Build.MODEL
                 + " / Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
         pw.println("version: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")");
+        pw.println("session : " + BugTrace.getSessionId());
+        pw.println("---- recent trace (last 200 lines) ----");
+        pw.println(BugTrace.recentJson(200));
         pw.println("---- stack ----");
         t.printStackTrace(pw);
         Throwable c = t.getCause();

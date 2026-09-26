@@ -4,6 +4,7 @@ import android.os.SystemClock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -56,6 +57,7 @@ public class TrackEngine {
     private long startNanos = 0;
     private long lastNanos = 0;
     private double distM = 0;              // 已走里程（米）
+    private int tickCounter = 0;           // 用于控制 computeNext 日志频率
 
     private final Random rnd = new Random();
     /** GPS 抖动默认开启，但幅度只有十几厘米（真实手机静止时 GPS 漂移量级）。 */
@@ -84,13 +86,23 @@ public class TrackEngine {
 
     private Listener listener;
 
-    public void setListener(Listener l) { this.listener = l; }
+    public void setListener(Listener l) {
+        BugTrace.event("TrackEngine", "setListener old=" + listenerHash(listener)
+                + " new=" + listenerHash(l));
+        this.listener = l;
+    }
+
+    private static String listenerHash(Listener l) {
+        return l == null ? "null" : Integer.toHexString(l.hashCode());
+    }
 
     // ============ 路线编辑 ============
 
     /** 加入一个 WGS-84 节点。 */
     public void addNode(double wgsLat, double wgsLng) {
         route.add(new TrackPoint(wgsLat, wgsLng));
+        BugTrace.trace("TrackEngine", "addNode lat=" + wgsLat + " lng=" + wgsLng
+                + " nodes=" + route.size());
         rebuild();
     }
 
@@ -103,6 +115,7 @@ public class TrackEngine {
     public void removeLast() {
         if (route.isEmpty()) return;
         route.remove(route.size() - 1);
+        BugTrace.trace("TrackEngine", "removeLast nodes=" + route.size());
         rebuild();
     }
 
@@ -110,6 +123,7 @@ public class TrackEngine {
         route.clear();
         smooth.clear();
         totalLenM = 0;
+        BugTrace.info("TrackEngine", "clear route");
     }
 
     public int nodeCount() { return route.size(); }
@@ -134,6 +148,7 @@ public class TrackEngine {
      */
     public void smoothRoute(double minSpacingM) {
         if (route.size() < 3) return;
+        BugTrace.info("TrackEngine", "smoothRoute before=" + route.size() + " minSpacing=" + minSpacingM);
 
         // 1) 一阶低通：alpha 越小越平滑。用 0.35 保留形状又滤掉手抖
         final double alpha = 0.35;
@@ -167,6 +182,7 @@ public class TrackEngine {
 
         route.clear();
         route.addAll(out);
+        BugTrace.info("TrackEngine", "smoothRoute after=" + route.size());
         rebuild();
     }
 
@@ -259,7 +275,10 @@ public class TrackEngine {
     // ============ 运行控制 ============
 
     public void start(double kmh) {
-        if (!canStart()) return;
+        if (!canStart()) {
+            BugTrace.warn("TrackEngine", "start rejected canStart=false nodes=" + route.size() + " len=" + totalLenM);
+            return;
+        }
         targetSpeed = Math.max(0.1, kmh) / 3.6; // km/h -> m/s
         accelDistM = Math.min(40.0, totalLenM * 0.15);
         if (accelDistM < 5) accelDistM = totalLenM / 2.0;
@@ -270,21 +289,29 @@ public class TrackEngine {
         noiseLng = 0;
         startNanos = lastNanos = SystemClock.elapsedRealtimeNanos();
         running = true;
+        BugTrace.event("TrackEngine", "START kmh=" + kmh + " totalM=" + (int) totalLenM
+                + " accelM=" + (int) accelDistM + " listener=" + listenerHash(listener));
     }
 
     public void stop() {
         running = false;
         finished = true;
+        BugTrace.event("TrackEngine", "STOP distM=" + (int) distM);
     }
 
     public void pause() {
         running = false;
+        BugTrace.event("TrackEngine", "PAUSE distM=" + (int) distM);
     }
 
     public void resume() {
-        if (finished) return;
+        if (finished) {
+            BugTrace.warn("TrackEngine", "resume ignored because finished");
+            return;
+        }
         lastNanos = SystemClock.elapsedRealtimeNanos();
         running = true;
+        BugTrace.event("TrackEngine", "RESUME distM=" + (int) distM);
     }
 
     /**
@@ -308,6 +335,9 @@ public class TrackEngine {
         TrackPoint p = sampleAt(distM);
         p.speed = (float) v;
         p.bearing = bearingAt(distM);
+        // 控制日志频率：每 5 次 tick 写一次状态，避免日志被刷爆
+        tickCounter++;
+        boolean shouldLog = fin || (tickCounter % 5 == 0);
         if (noiseOn) {
             // 抖动模型（关键：幅值必须远小于每 tick 位移，否则轨迹会画成“烟花”）。
             //
@@ -334,6 +364,12 @@ public class TrackEngine {
         if (fin) {
             running = false;
             finished = true;
+            BugTrace.event("TrackEngine", "FINISHED distM=" + (int) distM);
+        }
+        if (shouldLog) {
+            BugTrace.trace("TrackEngine", "tick dtMs=" + dtMs + " distM=" + (int) distM
+                    + " totalM=" + (int) totalLenM + " speed=" + String.format(Locale.US, "%.2f", v)
+                    + " finished=" + fin + " listener=" + listenerHash(listener));
         }
         return p;
     }

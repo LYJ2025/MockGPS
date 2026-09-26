@@ -141,6 +141,7 @@ public abstract class BaseMapFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        BugTrace.trace("BaseMapFragment", "onCreate class=" + getClass().getSimpleName());
         initOsmdroid();
     }
 
@@ -167,15 +168,19 @@ public abstract class BaseMapFragment extends Fragment {
      * try/catch，保证一个步骤失败不会让整张地图黑掉 / 让 Fragment 崩掉。
      */
     protected void setupMap(View v) {
+        BugTrace.trace("BaseMapFragment", "setupMap START class=" + getClass().getSimpleName());
         try {
             mapView = v.findViewById(R.id.map);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "findViewById map failed", t);
+            BugTrace.error("BaseMapFragment", "findViewById map failed", t);
             return;
         }
         if (mapView == null) {
+            BugTrace.warn("BaseMapFragment", "setupMap mapView null");
             return;
         }
+        BugTrace.debug("BaseMapFragment", "setupMap mapView=" + hashOf(mapView)
+                + " class=" + getClass().getSimpleName());
         // ===== 段 1：基础设置 =====
         try {
             mapView.setTileSource(SRC_AMAP);
@@ -186,7 +191,7 @@ public abstract class BaseMapFragment extends Fragment {
             mapView.setHorizontalMapRepetitionEnabled(false);
             mapView.setVerticalMapRepetitionEnabled(false);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "mapView basic set failed", t);
+            BugTrace.error("BaseMapFragment", "segment1 basic set failed", t);
         }
 
         // ===== 段 2：overlay 替换 =====
@@ -199,7 +204,7 @@ public abstract class BaseMapFragment extends Fragment {
             applyZoomLimit(SRC_AMAP);
             mapView.getController().setZoom(16.0);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "overlay replace failed", t);
+            BugTrace.error("BaseMapFragment", "segment2 overlay replace failed", t);
         }
 
         // ===== 段 3：比例尺 =====
@@ -211,7 +216,7 @@ public abstract class BaseMapFragment extends Fragment {
             scaleBar.setScaleBarOffset(pad, pad);
             mapView.getOverlays().add(scaleBar);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "scaleBar add failed", t);
+            BugTrace.error("BaseMapFragment", "segment3 scaleBar add failed", t);
         }
 
         // ===== 段 4：真实位置蓝点 =====
@@ -224,14 +229,14 @@ public abstract class BaseMapFragment extends Fragment {
             if (dot != null) realMarker.setIcon(dot);
             mapView.getOverlays().add(realMarker);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "realMarker add failed", t);
+            BugTrace.error("BaseMapFragment", "segment4 realMarker add failed", t);
         }
 
         // ===== 段 5：子类自己的图层 =====
         try {
             addExtraOverlays();
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "addExtraOverlays failed", t);
+            BugTrace.error("BaseMapFragment", "segment5 addExtraOverlays failed", t);
         }
 
         // ===== 段 6：单击事件 =====
@@ -250,7 +255,7 @@ public abstract class BaseMapFragment extends Fragment {
             });
             mapView.getOverlays().add(events);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "MapEventsOverlay add failed", t);
+            BugTrace.error("BaseMapFragment", "segment6 MapEventsOverlay add failed", t);
         }
 
         // ===== 段 7：地图源切换 + 缩放/居中按钮 =====
@@ -277,7 +282,7 @@ public abstract class BaseMapFragment extends Fragment {
             });
             if (btnCenter != null) btnCenter.setOnClickListener(x -> onCenterClicked());
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "toggle/zoom button bind failed", t);
+            BugTrace.error("BaseMapFragment", "segment7 toggle/zoom button bind failed", t);
         }
 
         // ===== 段 8：真实位置订阅 =====
@@ -285,7 +290,7 @@ public abstract class BaseMapFragment extends Fragment {
             enableRealLocation();
             centerOnRealIfIdle(true);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "enableRealLocation failed", t);
+            BugTrace.error("BaseMapFragment", "segment8 enableRealLocation failed", t);
         }
 
         // ===== 段 9：MapView 兜底 resume + 恢复/确定地图中心 =====
@@ -311,20 +316,26 @@ public abstract class BaseMapFragment extends Fragment {
                 }
             }
             IGeoPoint c = mapView.getMapCenter();
-            DiagLog.d("BaseMapFragment.setupMap " + getClass().getSimpleName()
+            BugTrace.info("BaseMapFragment", "setupMap END class=" + getClass().getSimpleName()
+                    + " mapView=" + hashOf(mapView)
                     + " mapW=" + mapView.getWidth() + " mapH=" + mapView.getHeight()
+                    + " overlays=" + mapView.getOverlays().size()
                     + " centerRestored=" + (restored != null)
                     + " center=" + (c != null ? c.getLatitude() + "," + c.getLongitude() : "null"));
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "mapView onResume failed", t);
+            BugTrace.error("BaseMapFragment", "segment9 mapView onResume failed", t);
         }
 
         // ===== 段 10：玻璃底图 =====
         try {
             setupGlass(v);
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "setupGlass swallowed", t);
+            BugTrace.error("BaseMapFragment", "segment10 setupGlass failed", t);
         }
+    }
+
+    protected static String hashOf(Object o) {
+        return o == null ? "null" : Integer.toHexString(System.identityHashCode(o));
     }
 
     /**
@@ -374,6 +385,8 @@ public abstract class BaseMapFragment extends Fragment {
     }
 
     protected void switchTileSource(OnlineTileSourceBase src) {
+        BugTrace.event("BaseMapFragment", "switchTileSource to=" + src.name()
+                + " class=" + getClass().getSimpleName());
         mapView.setTileSource(src);
         // 换了图源，自有源瓦片副本全部作废 —— 同一个瓦片索引现在对应完全不同的图，
         // 不清就会把上一个图源的像素继续画出来。
@@ -429,6 +442,8 @@ public abstract class BaseMapFragment extends Fragment {
     }
 
     protected void enableRealLocation() {
+        BugTrace.trace("BaseMapFragment", "enableRealLocation class=" + getClass().getSimpleName()
+                + " hasPerm=" + hasLocationPermission() + " mapView=" + hashOf(mapView));
         if (mapView == null || !hasLocationPermission()) return;
         Location cached = bestRealLocation();
         if (cached != null) showRealPosition(cached);
@@ -452,6 +467,7 @@ public abstract class BaseMapFragment extends Fragment {
 
     private void removeRealUpdates() {
         if (!realUpdatesOn) return;
+        BugTrace.trace("BaseMapFragment", "removeRealUpdates class=" + getClass().getSimpleName());
         realUpdatesOn = false;
         LocationManager lm = activity().getLocationManager();
         if (lm == null) return;
@@ -474,6 +490,9 @@ public abstract class BaseMapFragment extends Fragment {
         Location loc = bestRealLocation();
         if (loc == null) return;
         GeoPoint gp = toMapPoint(loc.getLatitude(), loc.getLongitude());
+        BugTrace.debug("BaseMapFragment", "centerOnRealIfIdle class=" + getClass().getSimpleName()
+                + " animate=" + animate + " loc=" + loc.getProvider()
+                + " center=" + gp.getLatitude() + "," + gp.getLongitude());
         if (animate) {
             mapView.getController().animateTo(gp);
         } else {
@@ -511,6 +530,8 @@ public abstract class BaseMapFragment extends Fragment {
     private final LocationListener realListener = new LocationListener() {
         @Override
         public void onLocationChanged(@NonNull Location location) {
+            BugTrace.trace("BaseMapFragment", "realLocationChanged provider=" + location.getProvider()
+                    + " lat=" + location.getLatitude() + " lng=" + location.getLongitude());
             showRealPosition(location);
             centerOnRealIfIdle(true);
             if (mapView != null) mapView.invalidate();
@@ -532,6 +553,8 @@ public abstract class BaseMapFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        BugTrace.trace("BaseMapFragment", "onResume class=" + getClass().getSimpleName()
+                + " added=" + isAdded() + " mapView=" + hashOf(mapView));
         try {
             if (!isAdded()) {
                 return;
@@ -548,24 +571,29 @@ public abstract class BaseMapFragment extends Fragment {
             // 切页时序里任何一个 NPE / IllegalState 都不应让应用挂掉：
             // 用户描述的"一用就闪退"很可能就来自这里。吞掉异常，
             // 玻璃不强求恢复，等用户切回时 setupGlass 会重建。
-            android.util.Log.w("BaseMapFragment", "onResume swallowed", t);
+            BugTrace.error("BaseMapFragment", "onResume swallowed class=" + getClass().getSimpleName(), t);
         }
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        BugTrace.trace("BaseMapFragment", "onPause class=" + getClass().getSimpleName()
+                + " mapView=" + hashOf(mapView));
         try {
             if (mapView != null) {
                 mapView.onPause();
             }
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "onPause swallowed", t);
+            BugTrace.error("BaseMapFragment", "onPause swallowed", t);
         }
     }
 
     @Override
     public void onDestroyView() {
+        BugTrace.trace("BaseMapFragment", "onDestroyView START class=" + getClass().getSimpleName()
+                + " mapView=" + hashOf(mapView));
+        IGeoPoint savedCenter = null;
         try {
             removeRealUpdates();
         } catch (Throwable ignored) { }
@@ -575,7 +603,8 @@ public abstract class BaseMapFragment extends Fragment {
                 // 不恢复就会跳到几内亚湾的海面上 —— 看起来就像"地图是白的"。
                 try {
                     if (mapView.getMapCenter() != null) {
-                        SAVED_CENTERS.put(getClass().getName(), mapView.getMapCenter());
+                        savedCenter = mapView.getMapCenter();
+                        SAVED_CENTERS.put(getClass().getName(), savedCenter);
                     }
                 } catch (Throwable ignored) { }
 
@@ -585,8 +614,12 @@ public abstract class BaseMapFragment extends Fragment {
                 mapView = null;
             }
         } catch (Throwable t) {
-            android.util.Log.w("BaseMapFragment", "onDestroyView mapView detach swallowed", t);
+            BugTrace.error("BaseMapFragment", "onDestroyView mapView detach swallowed", t);
         }
+        BugTrace.info("BaseMapFragment", "onDestroyView END class=" + getClass().getSimpleName()
+                + " savedCenter=" + (savedCenter != null
+                ? savedCenter.getLatitude() + "," + savedCenter.getLongitude() : "null")
+                + " savedCenters=" + SAVED_CENTERS.size());
         realMarker = null;
         // overlay 本体会随 MapView.onDetach() 一起走（那时它自己会清掉源瓦片副本缓存），
         // 这里只是把引用放掉

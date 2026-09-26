@@ -41,6 +41,7 @@ public class PickFragment extends BaseMapFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        BugTrace.setPage("Pick");
         View v = inflater.inflate(R.layout.fragment_map, container, false);
         setupMap(v);
 
@@ -61,6 +62,10 @@ public class PickFragment extends BaseMapFragment {
         pickTrailLine.setGeodesic(false);
         mapView.getOverlays().add(pickTrailLine);
         trailListener = this::redrawPickTrail;
+        BugTrace.info("PickFragment", "onCreateView mapView=" + hashOf(mapView)
+                + " pickMarker=" + hashOf(pickMarker)
+                + " pickTrailLine=" + hashOf(pickTrailLine)
+                + " overlays=" + mapView.getOverlays().size());
 
         ImageButton btnFav = v.findViewById(R.id.btn_map_fav);
         if (btnFav != null) btnFav.setOnClickListener(x -> favoriteSelected());
@@ -89,6 +94,8 @@ public class PickFragment extends BaseMapFragment {
         for (TrackEngine.TrackPoint t : activity().getSharedTrail()) {
             pts.add(toMapPoint(t.lat, t.lng));
         }
+        BugTrace.trace("PickFragment", "redrawPickTrail pts=" + pts.size()
+                + " pickTrailLine=" + hashOf(pickTrailLine));
         // 与 TrackFragment.writePoints 同样的自愈逻辑：osmdroid 的 Polyline 一旦经历过
         // MapView.onDetach()，内部 LinearRing 会被清空，setPoints() 直接抛 NPE（已用 javap 确认）。
         // 抛出就说明这个对象废了 —— 摘掉重建，不能让整页崩掉。
@@ -98,10 +105,12 @@ public class PickFragment extends BaseMapFragment {
                 mapView.invalidate();
                 return;
             } catch (NullPointerException broken) {
+                BugTrace.warn("PickFragment", "redrawPickTrail Polyline broken, heal");
                 try {
                     mapView.getOverlays().remove(pickTrailLine);
                 } catch (Throwable ignored) { }
             } catch (Throwable t) {
+                BugTrace.error("PickFragment", "redrawPickTrail setPoints failed", t);
                 return;
             }
         }
@@ -113,7 +122,9 @@ public class PickFragment extends BaseMapFragment {
             mapView.getOverlays().add(pickTrailLine);
             pickTrailLine.setPoints(pts);
             mapView.invalidate();
-        } catch (Throwable ignored) {
+            BugTrace.info("PickFragment", "redrawPickTrail healed newLine=" + hashOf(pickTrailLine));
+        } catch (Throwable t) {
+            BugTrace.error("PickFragment", "redrawPickTrail heal failed", t);
         }
     }
 
@@ -131,6 +142,8 @@ public class PickFragment extends BaseMapFragment {
         pickMarker.setPosition(p);
         pickMarker.setVisible(true);
         mapView.invalidate();
+        BugTrace.debug("PickFragment", "onMapTap gcj=" + p.getLatitude() + "," + p.getLongitude()
+                + " wgs=" + selLat + "," + selLng);
 
         boolean ok = activity().applyMock(selLat, selLng);
         updateCoordText();
@@ -234,6 +247,9 @@ public class PickFragment extends BaseMapFragment {
     @Override
     public void onResume() {
         super.onResume();
+        BugTrace.setPage("Pick");
+        BugTrace.info("PickFragment", "onResume isAdded=" + isAdded()
+                + " mapView=" + hashOf(mapView) + " listener=" + hashOf(trailListener));
         try {
             if (!isAdded()) return;
             if (mapView == null) return;   // 视图尚未创建（ViewPager2 时序），onCreateView 里会做
@@ -245,8 +261,14 @@ public class PickFragment extends BaseMapFragment {
         } catch (Throwable t) {
             // 切页时序里任何一个 NPE 都不能让应用挂掉。
             // logcat 出来再定位，不要让用户看到闪退。
-            android.util.Log.w("PickFragment", "onResume swallowed", t);
+            BugTrace.error("PickFragment", "onResume swallowed", t);
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        BugTrace.trace("PickFragment", "onPause mapView=" + hashOf(mapView));
     }
 
     @Override
@@ -254,10 +276,15 @@ public class PickFragment extends BaseMapFragment {
         // 不能依赖 isAdded() 判断是否移除监听器：ViewPager2 销毁离屏页时 Fragment
         // 可能已经 detached，那样移除会被跳过、回调继续打到已销毁的视图上。
         final MainActivity act = (MainActivity) getActivity();
+        int overlaysBefore = mapView != null ? mapView.getOverlays().size() : -1;
+        BugTrace.info("PickFragment", "onDestroyView START act=" + hashOf(act)
+                + " overlays=" + overlaysBefore);
         if (act != null) {
             try {
                 act.removeTrailListener(trailListener);
-            } catch (Throwable ignored) { }
+            } catch (Throwable t) {
+                BugTrace.error("PickFragment", "removeTrailListener failed", t);
+            }
         }
         trailListener = null;
 
@@ -267,13 +294,17 @@ public class PickFragment extends BaseMapFragment {
             if (mapView != null) {
                 if (pickTrailLine != null) mapView.getOverlays().remove(pickTrailLine);
                 if (pickMarker != null) mapView.getOverlays().remove(pickMarker);
+                BugTrace.debug("PickFragment", "onDestroyView overlays after remove=" + mapView.getOverlays().size());
             }
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) {
+            BugTrace.error("PickFragment", "overlay remove failed", t);
+        }
 
         pickMarker = null;
         pickTrailLine = null;
         tvCoord = null;
         tvState = null;
+        BugTrace.info("PickFragment", "onDestroyView END");
         super.onDestroyView();
     }
 }

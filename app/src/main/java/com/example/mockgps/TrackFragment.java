@@ -68,6 +68,7 @@ public class TrackFragment extends BaseMapFragment {
                 @Override
                 public void onGlobalLayout() {
                     if (mapView == null || getView() == null) return;
+                    BugTrace.trace("TrackFragment", "redrawOnLayout fired mapView=" + hashOf(mapView));
                 try {
                     getView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 } catch (Throwable ignored) { }
@@ -104,12 +105,13 @@ public class TrackFragment extends BaseMapFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        BugTrace.setPage("Track");
         View v = inflater.inflate(R.layout.fragment_track, container, false);
         setupMap(v);
-        DiagLog.d("TrackFragment.onCreateView setupMap done mapView=" + (mapView != null)
-                + " routeLine=" + (routeLine != null) + " trailLine=" + (trailLine != null)
-                + " startMarker=" + (startMarker != null) + " endMarker=" + (endMarker != null)
-                + " playbackMarker=" + (playbackMarker != null));
+        BugTrace.info("TrackFragment", "onCreateView setupMap done mapView=" + hashOf(mapView)
+                + " routeLine=" + hashOf(routeLine) + " trailLine=" + hashOf(trailLine)
+                + " startMarker=" + hashOf(startMarker) + " endMarker=" + hashOf(endMarker)
+                + " playbackMarker=" + hashOf(playbackMarker));
         // 画笔模式「开始画」后的触摸接管必须挂上：单指画线、双指仍可缩放。
         // 这一步上一版漏了，导致"开始画"后没有任何触摸拦截、地图照常平移。
         setupDrawTouch();
@@ -195,6 +197,8 @@ public class TrackFragment extends BaseMapFragment {
         // 否则会 NPE 闪退（切页时最容易踩到）。
         activity().setTrackListener((p, dist, total, fin) -> {
             if (mapView == null || playbackMarker == null) return;
+            BugTrace.trace("TrackFragment", "trackListener tick pos=" + p.lat + "," + p.lng
+                    + " dist=" + (int) dist + " total=" + (int) total + " finished=" + fin);
             playbackMarker.setPosition(toMapPoint(p.lat, p.lng));
             playbackMarker.setVisible(true);
             // 蓝点位置变了必须触发一次重绘，否则地图不会自动刷新（之前只改了 Marker 位置
@@ -232,10 +236,14 @@ public class TrackFragment extends BaseMapFragment {
         //      视图真正可见之后触发，绝不会出现"卡在空白、除非手动操作"。
         try {
             v.getViewTreeObserver().addOnGlobalLayoutListener(redrawOnLayout);
-        } catch (Throwable ignored) { }
+            BugTrace.debug("TrackFragment", "onCreateView schedule redrawOnLayout");
+        } catch (Throwable t) {
+            BugTrace.error("TrackFragment", "addOnGlobalLayoutListener failed", t);
+        }
         if (mapView != null) {
             mapView.post(() -> redrawAll());
             mapView.postDelayed(() -> redrawAll(), 250);
+            BugTrace.debug("TrackFragment", "onCreateView schedule post + postDelayed(250) redrawAll");
         }
         return v;
     }
@@ -261,7 +269,11 @@ public class TrackFragment extends BaseMapFragment {
                 playbackMarker.setPosition(toMapPoint(last.lat, last.lng));
             }
             mapView.invalidate();
-        } catch (Throwable ignored) { }
+            BugTrace.debug("TrackFragment", "restorePlaybackMarker show=" + show
+                    + " pos=" + (last != null ? last.lat + "," + last.lng : "null"));
+        } catch (Throwable t) {
+            BugTrace.error("TrackFragment", "restorePlaybackMarker failed", t);
+        }
     }
 
     /**
@@ -274,14 +286,14 @@ public class TrackFragment extends BaseMapFragment {
      */
     private void redrawAll() {
         if (!isAdded() || mapView == null) {
-            DiagLog.d("TrackFragment.redrawAll SKIP isAdded=" + isAdded()
+            BugTrace.warn("TrackFragment", "redrawAll SKIP isAdded=" + isAdded()
                     + " mapView=" + (mapView != null));
             return;
         }
         // 关键诊断：地图宽高 + 中心。若切回轨迹页后中心被拽回真实 GPS（而非停在路线上），
         // 就是「蓝点/起点/绿线消失」的根因；post() 之后宽高应是真实尺寸。
-        DiagLog.d("TrackFragment.redrawAll run mapW=" + mapView.getWidth()
-                + " mapH=" + mapView.getHeight()
+        BugTrace.debug("TrackFragment", "redrawAll run mapView=" + hashOf(mapView)
+                + " mapW=" + mapView.getWidth() + " mapH=" + mapView.getHeight()
                 + " center=" + mapView.getMapCenter().getLatitude()
                 + "," + mapView.getMapCenter().getLongitude()
                 + " smooth=" + activity().getTrackEngine().getSmooth().size()
@@ -289,19 +301,26 @@ public class TrackFragment extends BaseMapFragment {
                 + " trail=" + activity().getSharedTrail().size()
                 + " lastTP=" + (activity().getLastTrackPoint() != null));
         try { redrawRoute(); } catch (Throwable t) {
-            DiagLog.e("redrawRoute", t);
+            BugTrace.error("TrackFragment", "redrawRoute failed", t);
         }
         try { redrawTrail(); } catch (Throwable t) {
-            DiagLog.e("redrawTrail", t);
+            BugTrace.error("TrackFragment", "redrawTrail failed", t);
         }
         try { restorePlaybackMarker(); } catch (Throwable t) {
-            DiagLog.e("restorePlaybackMarker", t);
+            BugTrace.error("TrackFragment", "restorePlaybackMarker failed", t);
         }
-        DiagLog.d("TrackFragment.redrawAll done"
-                + " startMarker=" + (startMarker != null)
-                + " endMarker=" + (endMarker != null)
-                + " trailLine=" + (trailLine != null)
-                + " playbackMarker=" + (playbackMarker != null));
+        BugTrace.debug("TrackFragment", "redrawAll done"
+                + " routeLine=" + hashOf(routeLine)
+                + " trailLine=" + hashOf(trailLine)
+                + " startMarker=" + markerInfo(startMarker)
+                + " endMarker=" + markerInfo(endMarker)
+                + " playbackMarker=" + markerInfo(playbackMarker)
+                + " overlays=" + mapView.getOverlays().size());
+    }
+
+    private static String markerInfo(Marker m) {
+        if (m == null) return "null";
+        return hashOf(m);
     }
 
     /** 新建「规划路线」图层（蓝）。 */
@@ -356,6 +375,13 @@ public class TrackFragment extends BaseMapFragment {
         Drawable pd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_my_location);
         if (pd != null) playbackMarker.setIcon(pd);
         mapView.getOverlays().add(playbackMarker);
+
+        BugTrace.debug("TrackFragment", "addExtraOverlays routeLine=" + hashOf(routeLine)
+                + " trailLine=" + hashOf(trailLine)
+                + " startMarker=" + hashOf(startMarker)
+                + " endMarker=" + hashOf(endMarker)
+                + " playbackMarker=" + hashOf(playbackMarker)
+                + " overlays=" + mapView.getOverlays().size());
 
         // 画笔的触摸处理不再挂 Overlay —— 见 setupDrawTouch()。
         // 用 MapView 的 OnTouchListener 才能同时拿到"这一下是几根手指"，
@@ -653,6 +679,7 @@ public class TrackFragment extends BaseMapFragment {
                 return line;
             } catch (NullPointerException broken) {
                 // 内部 LinearRing 已被清空 —— 摘掉这个"半死"对象，下面重建
+                BugTrace.warn("TrackFragment", "writePoints Polyline broken (LinearRing cleared), will heal isRoute=" + isRoute);
                 try {
                     if (mapView != null) {
                         mapView.getOverlays().remove(line);
@@ -677,6 +704,8 @@ public class TrackFragment extends BaseMapFragment {
         } else {
             trailLine = line;
         }
+        BugTrace.info("TrackFragment", "writePoints healed isRoute=" + isRoute
+                + " newLine=" + hashOf(line) + " pts=" + pts.size());
         return line;
     }
 
@@ -690,7 +719,12 @@ public class TrackFragment extends BaseMapFragment {
         for (TrackEngine.TrackPoint t : engine.getSmooth()) {
             pts.add(toMapPoint(t.lat, t.lng));
         }
-        if (writePoints(true, pts) == null) return;   // 图层不可用：本帧连起终点标记也跳过
+        BugTrace.trace("TrackFragment", "redrawRoute pts=" + pts.size()
+                + " nodes=" + engine.nodeCount());
+        if (writePoints(true, pts) == null) {
+            BugTrace.warn("TrackFragment", "redrawRoute writePoints returned null");
+            return;   // 图层不可用：本帧连起终点标记也跳过
+        }
         // 起终点标记
         if (startMarker != null) {
             if (engine.nodeCount() >= 1) {
@@ -711,6 +745,8 @@ public class TrackFragment extends BaseMapFragment {
             }
         }
         if (mapView != null) mapView.invalidate();
+        BugTrace.trace("TrackFragment", "redrawRoute done start=" + markerInfo(startMarker)
+                + " end=" + markerInfo(endMarker));
     }
 
     /**
@@ -730,8 +766,15 @@ public class TrackFragment extends BaseMapFragment {
         for (TrackEngine.TrackPoint t : activity().getSharedTrail()) {
             pts.add(toMapPoint(t.lat, t.lng));
         }
-        if (writePoints(false, pts) == null) return;
+        BugTrace.trace("TrackFragment", "redrawTrail pts=" + pts.size()
+                + " trailLine=" + hashOf(trailLine));
+        if (writePoints(false, pts) == null) {
+            BugTrace.warn("TrackFragment", "redrawTrail writePoints returned null");
+            return;
+        }
         mapView.invalidate();
+        BugTrace.trace("TrackFragment", "redrawTrail done trailLine=" + hashOf(trailLine)
+                + " visible=" + (trailLine != null && trailLine.isVisible()));
     }
 
     private void onStartTrack() {
@@ -904,7 +947,9 @@ public class TrackFragment extends BaseMapFragment {
     @Override
     public void onResume() {
         super.onResume();
-        DiagLog.d("TrackFragment.onResume isAdded=" + isAdded() + " mapView=" + (mapView != null));
+        BugTrace.setPage("Track");
+        BugTrace.info("TrackFragment", "onResume isAdded=" + isAdded()
+                + " mapView=" + hashOf(mapView) + " trailListener=" + hashOf(trailListener));
         try {
             if (!isAdded()) return;
             if (mapView == null) return;   // 视图尚未创建（ViewPager2 时序），onCreateView 里会做
@@ -920,8 +965,14 @@ public class TrackFragment extends BaseMapFragment {
             setDrawingUi(polyAdding || activity().getTrackEngine().isDrawing());
             updateTrackButton();
         } catch (Throwable t) {
-            DiagLog.e("TrackFragment.onResume swallowed", t);
+            BugTrace.error("TrackFragment", "onResume swallowed", t);
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        BugTrace.trace("TrackFragment", "onPause mapView=" + hashOf(mapView));
     }
 
     @Override
@@ -931,18 +982,24 @@ public class TrackFragment extends BaseMapFragment {
         // 回调随后继续打到已销毁的视图上 —— 这正是"轨迹运行中切页闪退"的成因。
         // getActivity() 不要求 added 状态，判空就足够。
         final MainActivity act = (MainActivity) getActivity();
-        DiagLog.d("TrackFragment.onDestroyView attached=" + (act != null)
+        int overlaysBefore = mapView != null ? mapView.getOverlays().size() : -1;
+        BugTrace.info("TrackFragment", "onDestroyView START act=" + hashOf(act)
                 + " lastTP=" + (act != null && act.getLastTrackPoint() != null)
                 + " trail=" + (act != null ? act.getSharedTrail().size() : -1)
-                + " nodeCount=" + (act != null ? act.getTrackEngine().nodeCount() : -1));
+                + " nodeCount=" + (act != null ? act.getTrackEngine().nodeCount() : -1)
+                + " overlays=" + overlaysBefore);
         if (act != null) {
             try {
                 act.removeTrailListener(trailListener);
-            } catch (Throwable ignored) { }
+            } catch (Throwable t) {
+                BugTrace.error("TrackFragment", "removeTrailListener failed", t);
+            }
             try {
                 // tick 回调同理：清空引用，避免视图销毁后仍被触发
                 act.setTrackListener(null);
-            } catch (Throwable ignored) { }
+            } catch (Throwable t) {
+                BugTrace.error("TrackFragment", "setTrackListener(null) failed", t);
+            }
         }
         trailListener = null;
 
@@ -957,8 +1014,12 @@ public class TrackFragment extends BaseMapFragment {
                 if (startMarker != null) ov.remove(startMarker);
                 if (endMarker != null) ov.remove(endMarker);
                 if (playbackMarker != null) ov.remove(playbackMarker);
+                BugTrace.debug("TrackFragment", "onDestroyView overlays after remove=" + ov.size()
+                        + " before=" + overlaysBefore);
             }
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) {
+            BugTrace.error("TrackFragment", "overlay remove failed", t);
+        }
 
         routeLine = null;
         trailLine = null;
@@ -979,6 +1040,7 @@ public class TrackFragment extends BaseMapFragment {
                 getView().getViewTreeObserver().removeOnGlobalLayoutListener(redrawOnLayout);
             }
         } catch (Throwable ignored) { }
+        BugTrace.info("TrackFragment", "onDestroyView END");
         super.onDestroyView();
     }
 }

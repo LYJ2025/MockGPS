@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 应用专属外部目录，用于分享导出的日志 zip -->
+    <external-files-path
+        name="trace_logs"
+        path="." />
+</paths>

@@ -34,6 +34,9 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -148,11 +151,21 @@ public class MainActivity extends AppCompatActivity {
     private final List<TrailListener> trailListeners = new ArrayList<>();
 
     public void addTrailListener(TrailListener l) {
-        if (l != null && !trailListeners.contains(l)) trailListeners.add(l);
+        if (l != null && !trailListeners.contains(l)) {
+            trailListeners.add(l);
+        }
+        BugTrace.event("MainActivity", "addTrailListener listener=" + hashOf(l)
+                + " count=" + trailListeners.size());
     }
 
     public void removeTrailListener(TrailListener l) {
         trailListeners.remove(l);
+        BugTrace.event("MainActivity", "removeTrailListener listener=" + hashOf(l)
+                + " count=" + trailListeners.size());
+    }
+
+    private static String hashOf(Object o) {
+        return o == null ? "null" : Integer.toHexString(System.identityHashCode(o));
     }
 
     public List<TrackEngine.TrackPoint> getSharedTrail() {
@@ -165,6 +178,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void notifyTrailChanged() {
+        BugTrace.trace("MainActivity", "notifyTrailChanged listeners=" + trailListeners.size()
+                + " trailSize=" + sharedTrail.size());
         for (TrailListener l : new ArrayList<>(trailListeners)) {
             try {
                 l.onTrailChanged();
@@ -178,12 +193,13 @@ public class MainActivity extends AppCompatActivity {
                 //
                 // 各 Fragment 里也做了"视图还在不在"的检查，这里是最后一道防线：
                 // 漏掉一个也不该闪退。
-                android.util.Log.w("MainActivity", "trail listener dropped", t);
+                BugTrace.error("MainActivity", "trail listener dropped listener=" + hashOf(l), t);
             }
         }
     }
 
     public void setTrackListener(TrackEngine.Listener l) {
+        BugTrace.event("MainActivity", "setTrackListener listener=" + hashOf(l));
         trackEngine.setListener(l);
     }
 
@@ -197,7 +213,11 @@ public class MainActivity extends AppCompatActivity {
 
     /** 开始轨迹模拟（speedKmh = 目标配速 km/h） */
     public boolean startTrack(double kmh) {
-        if (!trackEngine.canStart()) return false;
+        BugTrace.event("MainActivity", "startTrack kmh=" + kmh);
+        if (!trackEngine.canStart()) {
+            BugTrace.warn("MainActivity", "startTrack rejected canStart=false");
+            return false;
+        }
         ensureProvider();
         trackMode = true;
         // 注意：这里**不能**再写 state.valid = true。
@@ -210,10 +230,12 @@ public class MainActivity extends AppCompatActivity {
         handler.removeCallbacks(tick);
         handler.postDelayed(tick, 1000);
         refreshNavLock();   // 运行中 → 禁用一切页面切换
+        snapshotTrackState("startTrack");
         return true;
     }
 
     public void stopTrack() {
+        BugTrace.event("MainActivity", "stopTrack");
         trackMode = false;
         mockActive = false;
         trackEngine.stop();
@@ -223,6 +245,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (SecurityException ignored) {
         }
         refreshNavLock();   // 已停止 → 恢复页面切换
+        snapshotTrackState("stopTrack");
     }
 
     // ---------------- 轨迹「开始 / 停止 / 继续」三态 ----------------
@@ -234,18 +257,22 @@ public class MainActivity extends AppCompatActivity {
      * 把最后一点反复推出去，让虚拟位置停在原地（不推的话位置会被真实的/已选的坐标接管）。
      */
     public void pauseTrack() {
+        BugTrace.event("MainActivity", "pauseTrack");
         trackEngine.pause();
         refreshNavLock();   // 暂停 → 恢复页面切换
+        snapshotTrackState("pauseTrack");
     }
 
     /** 从暂停处继续。已经跑完（finished）时什么也不做。 */
     public void resumeTrack() {
+        BugTrace.event("MainActivity", "resumeTrack");
         trackEngine.resume();
         if (trackEngine.isRunning()) {
             handler.removeCallbacks(tick);
             handler.postDelayed(tick, 1000);
         }
         refreshNavLock();   // 继续 → 重新禁用页面切换
+        snapshotTrackState("resumeTrack");
     }
 
     /**
@@ -255,9 +282,30 @@ public class MainActivity extends AppCompatActivity {
      * 那时 {@code distM} 已经和新的路线对不上，继续跑只会错乱。
      */
     public void clearTrackProgress() {
+        BugTrace.event("MainActivity", "clearTrackProgress");
         lastTrackPoint = null;
         trackEngine.stop();     // running = false, finished = true → 按钮回「开始」
         refreshNavLock();       // 停止 → 恢复页面切换
+        snapshotTrackState("clearTrackProgress");
+    }
+
+    private void snapshotTrackState(String reason) {
+        try {
+            JSONObject st = new JSONObject();
+            st.put("reason", reason);
+            st.put("trackMode", trackMode);
+            st.put("mockActive", mockActive);
+            st.put("running", trackEngine.isRunning());
+            st.put("finished", trackEngine.isFinished());
+            st.put("distM", trackEngine.distanceM());
+            st.put("totalM", trackEngine.totalLengthM());
+            st.put("nodeCount", trackEngine.nodeCount());
+            st.put("trailSize", sharedTrail.size());
+            st.put("lastTrackPoint", lastTrackPoint != null);
+            st.put("listenerCount", trailListeners.size());
+            BugTrace.snapshot("trackState", st);
+        } catch (JSONException ignored) {
+        }
     }
 
     /**
@@ -274,6 +322,7 @@ public class MainActivity extends AppCompatActivity {
     private void refreshNavLock() {
         if (mTabs == null) return;
         boolean locked = trackEngine.isRunning();
+        BugTrace.trace("MainActivity", "refreshNavLock locked=" + locked);
         int count = mTabs.getTabCount();
         for (int i = 0; i < count; i++) {
             final TabLayout.Tab tab = mTabs.getTabAt(i);
@@ -303,6 +352,7 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager locationManager;
     private boolean mockActive = false;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private int tickSnapshotCounter = 0;
 
     /** 持续模拟：按共享状态每秒刷一次，防止被其他 App 覆盖回真实位置 */
     private final Runnable tick = new Runnable() {
@@ -310,6 +360,13 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             if (mockActive) {
                 long now = SystemClock.elapsedRealtimeNanos();
+                BugTrace.trace("MainActivity", "tick mockActive=" + mockActive
+                        + " trackMode=" + trackMode + " running=" + trackEngine.isRunning()
+                        + " finished=" + trackEngine.isFinished() + " distM=" + (int) trackEngine.distanceM()
+                        + " lastTP=" + (lastTrackPoint != null) + " trail=" + sharedTrail.size());
+                if (++tickSnapshotCounter % 5 == 0) {
+                    snapshotTrackState("tick");
+                }
                 if (trackMode && trackEngine.isRunning()) {
                     TrackEngine.TrackPoint p = trackEngine.computeNext(now);
                     if (p != null) {
@@ -354,11 +411,14 @@ public class MainActivity extends AppCompatActivity {
         // AppCompat 会在 super.onCreate 里应用深浅模式，提前设好可避免「先建错再重建」。
         ThemeManager.setupActivity(this);
         super.onCreate(savedInstanceState);
+        // 极详细追踪日志：比 DiagLog 更结构化，输出 JSONL，崩溃时自动 dump 最近记录。
+        BugTrace.init(this);
         // 崩溃记录：把未捕获异常的完整堆栈写进
         // /sdcard/Android/data/com.example.mockgps/files/crash_last.txt
         // 「切到轨迹页闪退」这类问题无法在开发机复现，靠它拿真实堆栈定位。
         CrashLogger.install(this);
         DiagLog.init(this);
+        BugTrace.setPage("Main");
 
         try {
             setContentView(R.layout.activity_main);
@@ -392,6 +452,23 @@ public class MainActivity extends AppCompatActivity {
                     (tab, position) -> tab.setText(
                             position == 0 ? "主页" : position == 1 ? "选点" : "轨迹")
             ).attach();
+            mTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+                @Override
+                public void onTabSelected(TabLayout.Tab tab) {
+                    BugTrace.event("MainActivity", "TAB_SELECTED position=" + tab.getPosition()
+                            + " text=" + tab.getText());
+                }
+
+                @Override
+                public void onTabUnselected(TabLayout.Tab tab) {
+                    BugTrace.trace("MainActivity", "TAB_UNSELECTED position=" + tab.getPosition());
+                }
+
+                @Override
+                public void onTabReselected(TabLayout.Tab tab) {
+                    BugTrace.trace("MainActivity", "TAB_RESELECTED position=" + tab.getPosition());
+                }
+            });
 
             // 轨迹模拟「进行中」时禁用一切页面切换：直接吞掉顶部 Tab 的点击触摸（切都切不动），
             // 而不是「先切走再锁回」——后者在 TabLayout+ViewPager2 点击链路上不可靠，会照样切走。
@@ -509,14 +586,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        BugTrace.trace("MainActivity", "onStart");
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+        BugTrace.trace("MainActivity", "onResume themeChanged="
+                + (appliedThemeGeneration >= 0 && appliedThemeGeneration != ThemeManager.generation(this)));
         refreshNavLock(); // 按当前引擎状态同步导航锁（如运行中从别处返回本页）
         // 从外观设置页返回：设置变过就重建自己，让新外观真正生效
         if (appliedThemeGeneration >= 0
                 && appliedThemeGeneration != ThemeManager.generation(this)) {
             recreate();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        BugTrace.trace("MainActivity", "onPause");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        BugTrace.trace("MainActivity", "onStop");
+    }
+
+    @Override
+    protected void onDestroy() {
+        BugTrace.trace("MainActivity", "onDestroy");
+        BugTrace.flushSync();
+        super.onDestroy();
     }
 
     private static class PageAdapter extends FragmentStateAdapter {

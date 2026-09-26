@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +18,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 
+import java.io.File;
 import java.util.Locale;
 
 /**
@@ -89,7 +91,40 @@ public class AppearanceActivity extends AppCompatActivity {
         addHapticsSwitch();
         // v1.20：已移除「恢复默认外观（方案 A）」按钮 —— 方案已固定，没有"恢复"的语义了
 
+        addExportLogsButton();
         addTutorialButton();
+    }
+
+    /** 「导出详细日志包」按钮：把 BugTrace 日志打包成 zip 并拉起分享。 */
+    private void addExportLogsButton() {
+        MaterialCardView card = newCard();
+        LinearLayout box = newBody(card);
+        box.addView(cardTitle("导出详细日志"));
+        box.addView(cardHint("把最近的运行日志、状态快照、设备信息打包成 zip，"
+                + "用于排查切页 / 渲染 / 闪退问题。"));
+
+        MaterialButton btn = new MaterialButton(this);
+        btn.setText("导出日志包");
+        btn.setAllCaps(false);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = dp(8);
+        btn.setLayoutParams(blp);
+        btn.setOnClickListener(v -> {
+            Motion.haptic(v);
+            File zip = TraceExporter.export(AppearanceActivity.this);
+            if (zip != null) {
+                Toast.makeText(this, "日志包已导出：\n" + zip.getAbsolutePath(),
+                        Toast.LENGTH_LONG).show();
+                TraceExporter.share(AppearanceActivity.this);
+            } else {
+                Toast.makeText(this, "导出失败", Toast.LENGTH_SHORT).show();
+            }
+        });
+        box.addView(btn);
+        content.addView(card);
+        Motion.rise(card);
     }
 
     /** 「开发者选项-模拟定位 开启教程」手动入口：重新弹出开屏那个 GIF 教程。 */

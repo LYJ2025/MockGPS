@@ -1,6 +1,6 @@
 # 虚拟定位助手（Virtual Location Assistant）
 
-![version](https://img.shields.io/badge/version-1.30-blue)
+![version](https://img.shields.io/badge/version-1.31-blue)
 ![platform](https://img.shields.io/badge/Android-5.0%2B-green)
 ![minSdk](https://img.shields.io/badge/minSdk-21-lightgrey)
 ![targetSdk](https://img.shields.io/badge/targetSdk-34-lightgrey)
@@ -87,7 +87,7 @@
 
 ### 方式一：下载预编译 APK（推荐）
 
-到本仓库的 **Releases** 页面下载最新版 `app-debug-vX.X.apk`（当前为 **v1.30**），传到手机后用文件管理器点击安装即可。
+到本仓库的 **Releases** 页面下载最新版 `app-debug-vX.X.apk`（当前为 **v1.31**），传到手机后用文件管理器点击安装即可。
 
 > 请直接安装 `.apk` 文件，**不要**下载 `.zip` 再在手机里解压——手机点 zip 不会把它当作安装包，会提示「无法打开文件」。
 > 若必须在手机上传，用电脑解压后将 apk 传进手机再安装。
@@ -262,6 +262,7 @@ App 有三个页面，顶部标签切换（也支持左右滑动）：**主页**
 | **v1.26** | 依据 v1.25 诊断日志定位到真凶并修复：日志显示切页全程**无 `onDestroyView`**（轨迹页根本没被销毁重建，之前的"重建修复"方向是错的），且 `setupMap` 时中心是 `0,0`。真因是 `BaseMapFragment.onResume` 里的 `centerOnRealIfIdle(true)`——轨迹模拟期间 `state.valid=false`、`state.lat=NaN`（`startTrack` 有意不写 state），于是每次切回轨迹页它都把地图中心拽回**真实 GPS 坐标**，而用户画的假路线在别处，路线/蓝点/绿线全被甩到屏幕外，看起来像"消失"。修复：`TrackFragment` 覆盖 `centerOnRealIfIdle`，**只要已有一条路线（`nodeCount()>=1`）就绝不自动回真实位置**，没有路线时才沿用基类默认。同时 `redrawAll` 日志补记地图中心，便于复核。 |
 | **v1.27** | 修「轨迹模拟运行中切回轨迹页，蓝点 / 绿色起点 / 绿色已走轨迹不显示」：tick 回调节点（播放蓝点置可见）后补 `mapView.invalidate()`；`redrawOnLayout` 由同步 `redrawAll()` 改为 `mapView.post(() -> redrawAll())`（等布局完成再画，解决 ViewPager2 重建场景下 `MapView` 未 attach、overlay 未及时渲染的经典坑）；`onCreateView` 末尾三重保险（`onGlobalLayout` 内 `post` + 直接 `post` + `postDelayed(250)`），`onResume` 末尾 `postDelayed(() -> redrawAll(), 250)` 兜底。版本号 1.27。 |
 | **v1.28 – v1.30** | 新增「轨迹模拟运行中禁止切页」：运行时点击顶部「主页 / 选点」Tab 不再跳转，仅 Toast 提示「请先停止模拟轨迹」；暂停 / 停止 / 自然结束后自动恢复切页。实现迭代：① v1.28 在 `onTabSelected` 里 `tab.select()` 弹回轨迹页，vivo 上因 `TabLayoutMediator` 双向同步触发 `onTabSelected` 递归 `StackOverflowError`；② v1.29 改用 `setCurrentItem(2)` 回锁，但 Tab 点击先切走、回锁被覆盖，只剩弹窗没真正拦住；③ v1.30 改为在 `refreshNavLock()` 中给每个 Tab 视图挂 `OnTouchListener` 返回 `true` 直接吞掉触摸事件，从源头禁用一切切页操作，无递归、无切走。版本号 1.28 → 1.30。 |
+| **v1.31** | 新增生产级详细日志系统 `BugTrace`：异步 JSONL 结构化日志（TRACE/DEBUG/INFO/WARN/ERROR/FATAL/EVENT），自动注入 session_id / trace_id / thread / page / 时间戳；环形缓冲 800 行，崩溃时自动 dump 最近 200 行到 `crash_last.txt`；覆盖 Activity/Fragment 生命周期、地图创建/销毁/重画、overlay 添加/更新/移除/自愈重建、轨迹引擎状态迁移、Tab 切换、导航锁等关键节点；提供 `BugTrace.markReplayStart/End()` 复现标记。新增 `TraceExporter` 一键导出日志包（`bugtrace.jsonl` + `state_snapshots.json` + `device_info.json`）zip，入口在外观设置页「导出详细日志」。版本号 1.31。 |
 
 ---
 
