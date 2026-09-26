@@ -1,6 +1,6 @@
 # 虚拟定位助手（Virtual Location Assistant）
 
-![version](https://img.shields.io/badge/version-1.26-blue)
+![version](https://img.shields.io/badge/version-1.30-blue)
 ![platform](https://img.shields.io/badge/Android-5.0%2B-green)
 ![minSdk](https://img.shields.io/badge/minSdk-21-lightgrey)
 ![targetSdk](https://img.shields.io/badge/targetSdk-34-lightgrey)
