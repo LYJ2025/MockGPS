@@ -186,6 +186,11 @@ public abstract class BaseMapFragment extends Fragment {
             mapView.setTileSource(SRC_AMAP);
             mapView.setBuiltInZoomControls(false);
             mapView.setMultiTouchControls(true);
+            // v1.32 关键修复：osmdroid 默认在 MapView.onDetachedFromWindow 时调用 onDetach()，
+            // 这会清空整个 overlays 列表。ViewPager2 切页正好触发 onDetachedFromWindow，
+            // 导致切回轨迹页时 Polyline/Marker 被清空 —— 就是「蓝点/绿起点/绿线消失」的根因。
+            // 关闭自动 destroy 模式，改由 onDestroyView 手动调用 onDetach()。
+            mapView.setDestroyMode(false);
             mapView.setTilesScaledToDpi(false);
             mapView.setMinZoomLevel(3.0);
             mapView.setHorizontalMapRepetitionEnabled(false);
@@ -554,7 +559,8 @@ public abstract class BaseMapFragment extends Fragment {
     public void onResume() {
         super.onResume();
         BugTrace.trace("BaseMapFragment", "onResume class=" + getClass().getSimpleName()
-                + " added=" + isAdded() + " mapView=" + hashOf(mapView));
+                + " added=" + isAdded() + " mapView=" + hashOf(mapView)
+                + " overlays=" + (mapView != null ? mapView.getOverlays().size() : -1));
         try {
             if (!isAdded()) {
                 return;
@@ -579,7 +585,8 @@ public abstract class BaseMapFragment extends Fragment {
     public void onPause() {
         super.onPause();
         BugTrace.trace("BaseMapFragment", "onPause class=" + getClass().getSimpleName()
-                + " mapView=" + hashOf(mapView));
+                + " mapView=" + hashOf(mapView)
+                + " overlays=" + (mapView != null ? mapView.getOverlays().size() : -1));
         try {
             if (mapView != null) {
                 mapView.onPause();
@@ -608,7 +615,9 @@ public abstract class BaseMapFragment extends Fragment {
                     }
                 } catch (Throwable ignored) { }
 
-                // 顺序很重要：先 onDetach 再置空，避免 osmdroid 内部 handler 回调到已销毁的 View
+                // 顺序很重要：先 onPause 再 onDetach 再置空，避免 osmdroid 内部 handler 回调到已销毁的 View。
+                // 由于 setupMap 里调了 setDestroyMode(false)，onDetachedFromWindow 不会自动 onDetach()，
+                // 所以 Fragment 真正销毁时必须手动调一次，否则 overlay 内存泄漏。
                 mapView.onPause();
                 mapView.onDetach();
                 mapView = null;

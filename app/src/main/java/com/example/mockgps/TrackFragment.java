@@ -679,10 +679,13 @@ public class TrackFragment extends BaseMapFragment {
                 return line;
             } catch (NullPointerException broken) {
                 // 内部 LinearRing 已被清空 —— 摘掉这个"半死"对象，下面重建
-                BugTrace.warn("TrackFragment", "writePoints Polyline broken (LinearRing cleared), will heal isRoute=" + isRoute);
+                BugTrace.warn("TrackFragment", "writePoints Polyline broken (LinearRing cleared), will heal isRoute=" + isRoute
+                    + " overlaysBeforeRemove=" + (mapView != null ? mapView.getOverlays().size() : -1));
                 try {
                     if (mapView != null) {
-                        mapView.getOverlays().remove(line);
+                        boolean removed = mapView.getOverlays().remove(line);
+                        BugTrace.debug("TrackFragment", "writePoints remove oldLine isRoute=" + isRoute
+                                + " removed=" + removed + " overlays=" + mapView.getOverlays().size());
                     }
                 } catch (Throwable ignored) { }
             } catch (Throwable t) {
@@ -695,6 +698,8 @@ public class TrackFragment extends BaseMapFragment {
         try {
             line = isRoute ? newRouteLine() : newTrailLine();
             mapView.getOverlays().add(line);
+            BugTrace.debug("TrackFragment", "writePoints add newLine isRoute=" + isRoute
+                    + " overlays=" + mapView.getOverlays().size());
             line.setPoints(pts);
         } catch (Throwable t) {
             return null;
@@ -705,7 +710,8 @@ public class TrackFragment extends BaseMapFragment {
             trailLine = line;
         }
         BugTrace.info("TrackFragment", "writePoints healed isRoute=" + isRoute
-                + " newLine=" + hashOf(line) + " pts=" + pts.size());
+                + " newLine=" + hashOf(line) + " pts=" + pts.size()
+                + " overlays=" + mapView.getOverlays().size());
         return line;
     }
 
